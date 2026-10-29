@@ -1,7 +1,5 @@
-import { Attribution } from "foldkit-flow";
-
+import { init } from "./main.ts";
 import type { Model } from "./main.ts";
 
-export const visible: Model = { attribution: Attribution.Visible() };
-
-export const hidden: Model = { attribution: Attribution.Hidden() };
+/** The model the example starts from: the small graph, the attribution visible, an empty log. */
+export const { model: start }: { model: Model } = init();

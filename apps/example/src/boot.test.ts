@@ -1,19 +1,9 @@
 import { assert, it } from "@effect/vitest";
-import { Effect, Schedule } from "effect";
+import { Effect } from "effect";
 import { Runtime } from "foldkit";
+import { eventually } from "foldkit-flow/testing";
 
 import { exampleApplication } from "./application.ts";
-
-// The runtime renders after the test body has started, so a test waits for the DOM state it is about: it reads the DOM
-// until `done` holds, at most 300 times 10 ms, and returns the last read (the assertion that follows names a miss).
-const eventually = <A>(read: () => A, done: (value: A) => boolean) =>
-  Effect.sync(read).pipe(
-    Effect.repeat({
-      schedule: Schedule.spaced("10 millis"),
-      times: 300,
-      until: done,
-    })
-  );
 
 // A Foldkit container needs an id (without one the runtime logs an error and renders nothing), and the first render
 // replaces the container element with the view's root. A test therefore holds the wrapper around the container, which
@@ -29,31 +19,71 @@ const newMount = (id: string) => {
   return { container, wrapper };
 };
 
+const link = "a[href='https://xyflow.com']";
+
 it.live(
-  "Runtime.run renders the shell into its container and a click hides the attribution",
+  "Runtime.run renders the flow, the xyflow attribution is on, and the button hides it",
   () =>
     Effect.gen(function* boot() {
       const { container, wrapper } = newMount("boot-run");
 
       Runtime.run(exampleApplication(container));
 
-      const heading = yield* eventually(
-        () => wrapper.querySelector("h1"),
-        (found) => found !== null
+      const nodes = yield* eventually(
+        () => wrapper.querySelectorAll(".foldkit-flow__node").length,
+        (count) => count > 0
       );
 
-      assert.strictEqual(heading?.textContent, "foldkit-flow");
-      assert.isNotNull(wrapper.querySelector("a[href='https://xyflow.com']"));
+      assert.strictEqual(nodes, 5);
+      assert.strictEqual(
+        wrapper.querySelector("h1")?.textContent,
+        "foldkit-flow"
+      );
+      assert.strictEqual(
+        wrapper.querySelector(".foldkit-flow__pane")?.getAttribute("role"),
+        "application"
+      );
+      assert.isNotNull(wrapper.querySelector(link));
 
-      wrapper.querySelector("button")?.dispatchEvent(new Event("click"));
+      for (const button of wrapper.querySelectorAll("button")) {
+        if (button.textContent === "Hide attribution") {
+          button.dispatchEvent(new Event("click"));
+        }
+      }
 
-      const link = yield* eventually(
-        () => wrapper.querySelector("a[href='https://xyflow.com']"),
+      const after = yield* eventually(
+        () => wrapper.querySelector(link),
         (found) => found === null
       );
 
-      assert.isNull(link);
+      assert.isNull(after);
     })
+);
+
+it.live("choosing the Large graph renders 500 nodes", () =>
+  Effect.gen(function* large() {
+    const { container, wrapper } = newMount("boot-large");
+
+    Runtime.run(exampleApplication(container));
+
+    yield* eventually(
+      () => wrapper.querySelectorAll(".foldkit-flow__node").length,
+      (count) => count > 0
+    );
+
+    for (const button of wrapper.querySelectorAll("button")) {
+      if (button.textContent === "Large") {
+        button.dispatchEvent(new Event("click"));
+      }
+    }
+
+    const count = yield* eventually(
+      () => wrapper.querySelectorAll(".foldkit-flow__node").length,
+      (nodes) => nodes === 500
+    );
+
+    assert.strictEqual(count, 500);
+  })
 );
 
 it.live(
@@ -78,6 +108,8 @@ it.live(
 
         assert.isNotNull(heading);
       }).pipe(Effect.scoped);
+
+      yield* Effect.sleep("100 millis");
 
       assert.isNull(wrapper.querySelector("h1"));
       assert.strictEqual(wrapper.firstElementChild?.childElementCount, 0);

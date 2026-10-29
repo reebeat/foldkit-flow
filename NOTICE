@@ -6,6 +6,9 @@ foldkit-flow depends on, and takes its design from, xyflow:
   @xyflow/system, https://github.com/xyflow/xyflow/tree/main/packages/system
   Copyright (c) 2019-2025 webkid GmbH. MIT licence.
 
+@xyflow/system uses d3-zoom, d3-drag, d3-selection and d3-interpolate, and foldkit-flow
+uses d3-selection directly (ISC licence, Copyright Mike Bostock, https://d3js.org).
+
 React Flow and Svelte Flow are bindings over @xyflow/system. foldkit-flow is a third
 binding: it drives the framework-free controllers of that package (pan and zoom, drag,
 handles, minimap, resizer) from Foldkit Mounts and uses its edge-path and graph

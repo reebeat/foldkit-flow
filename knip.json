@@ -15,6 +15,9 @@
     "tools/quality": {
       "entry": ["checkEffectExceptions.ts"],
       "project": ["*.ts", "test/**/*.ts"]
+    },
+    "tools/journey": {
+      "project": ["*.ts"]
     }
   },
   "ignoreBinaries": ["gitleaks"]
