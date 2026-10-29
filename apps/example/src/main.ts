@@ -1,7 +1,7 @@
 import { Button } from "@foldkit/ui";
 import { Schema } from "effect";
 import type { Runtime, Update } from "foldkit";
-import { Attribution, attributionView } from "foldkit-flow";
+import { Attribution, attributionView, defaultAttribution } from "foldkit-flow";
 import type { Document, HtmlBuilder } from "foldkit/html";
 import { defineMessageUnion } from "foldkit/message";
 import { modifyFields } from "foldkit/struct";
@@ -21,7 +21,7 @@ export type Message = typeof Message.Type;
 // INIT
 
 export const init: Runtime.ApplicationInit<Model, Message> = () => ({
-  model: { attribution: Attribution.Visible() },
+  model: { attribution: defaultAttribution },
 });
 
 // UPDATE

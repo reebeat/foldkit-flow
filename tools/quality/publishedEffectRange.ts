@@ -6,15 +6,15 @@ import {
   Order,
   Path,
   Record as Rec,
-  Result,
   Schema,
   String as Str,
 } from "effect";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 // Effect tags every export `@stability stable`, `unstable` or `experimental`. Since 4.0.0 an unstable or experimental
-// API may break in a minor release; a stable one follows strict semver. A package that publishes code importing an
-// unstable API must therefore not accept the next minor: its Effect range needs an upper bound below it. The set of
-// unstable APIs is the one the root tsconfig lists in `allowedUnstableApis`.
+// API may break in a minor release; a stable one follows strict semver. A package that publishes code using such an
+// API must therefore not accept the next minor: its Effect range needs an upper bound below it. Whether the code uses
+// one is not guessed from import specifiers: `effect-tsgo diagnostics` says so (`unstableApiUses` below).
 
 interface Version {
   readonly major: number;
@@ -67,18 +67,34 @@ const bump = (version: Version, part: "major" | "minor" | "patch"): Version => {
     : { ...version, patch: version.patch + 1 };
 };
 
-// The range forms a manifest may use: `^x.y.z`, `~x.y.z`, `x.y.z`, `>=x.y.z`, `>=x.y.z <a.b.c`.
+const boundedPattern = new RegExp(
+  `^>=${semver} <(?<umajor>\\d+)\\.(?<uminor>\\d+)\\.(?<upatch>\\d+)$`,
+  "u"
+);
+
+// The range forms a manifest may use: `^x.y.z`, `~x.y.z`, `x.y.z`, `>=x.y.z`, `>=x.y.z <a.b.c`. Anything else, such as
+// `>=4.1.0 || ^3.0.0`, is reported, not guessed at.
 const parseRange = (text: string): Option.Option<Range> => {
   const range = Str.trim(text);
 
   const caret = versionIn(`^\\^${semver}$`, range);
   const tilde = versionIn(`^~${semver}$`, range);
   const exact = versionIn(`^${semver}$`, range);
-  const lower = versionIn(`^>=${semver}(?: |$)`, range);
+  const lower = versionIn(`^>=${semver}$`, range);
 
-  const upper = Option.flatMap(
-    Option.fromNullishOr(new RegExp(`^>=.* <${semver}$`, "u").exec(range)),
-    ({ groups }) => toVersion(groups)
+  const bounded = Option.flatMap(
+    Option.fromNullishOr(boundedPattern.exec(range)),
+    ({ groups }) =>
+      Option.flatMap(toVersion(groups), (floor) =>
+        Option.map(
+          toVersion({
+            major: groups?.umajor,
+            minor: groups?.uminor,
+            patch: groups?.upatch,
+          }),
+          (ceiling) => [floor, ceiling] as const
+        )
+      )
   );
 
   if (Option.isSome(caret)) {
@@ -102,7 +118,14 @@ const parseRange = (text: string): Option.Option<Range> => {
     }));
   }
 
-  return Option.map(lower, (floor) => ({ ceiling: upper, floor }));
+  if (Option.isSome(bounded)) {
+    return Option.map(bounded, ([floor, ceiling]) => ({
+      ceiling: Option.some(ceiling),
+      floor,
+    }));
+  }
+
+  return Option.map(lower, (floor) => ({ ceiling: Option.none(), floor }));
 };
 
 const PackageManifest = Schema.Struct({
@@ -125,13 +148,13 @@ const dependencyFindings = (
   owner: string,
   name: string,
   text: string,
-  importsUnstableApi: boolean
+  unstableUses: readonly string[]
 ): readonly string[] => {
   const parsed = parseRange(text);
 
   if (Option.isNone(parsed)) {
     return [
-      `${owner}: ${name} "${text}" is not a range this check reads (^, ~, exact, >= with optional <)`,
+      `${owner}: ${name} "${text}" is not a range this check reads (^, ~, exact, or >= with an optional < bound)`,
     ];
   }
 
@@ -143,12 +166,12 @@ const dependencyFindings = (
     : [];
 
   const openFinding =
-    importsUnstableApi &&
+    Arr.isReadonlyArrayNonEmpty(unstableUses) &&
     !Option.exists(ceiling, (bound) =>
       Order.isLessThanOrEqualTo(versionOrder)(bound, nextMinor)
     )
       ? [
-          `${owner}: ${name} "${text}" must stay below ${show(nextMinor)} (use ~${show(floor)}) because the package imports an unstable Effect API`,
+          `${owner}: ${name} "${text}" must stay below ${show(nextMinor)} (use ~${show(floor)}) because the package uses unstable or experimental Effect APIs: ${Arr.join(Arr.take(unstableUses, 3), "; ")}`,
         ]
       : [];
 
@@ -157,11 +180,12 @@ const dependencyFindings = (
 
 /**
  * Sentences that say how the Effect ranges of a published manifest are wrong: a floor below `minimumEffect`, an
- * unreadable range, or, when the package imports an unstable API, no upper bound below the next minor release.
+ * unreadable range, or, when the package uses unstable or experimental APIs, no upper bound below the next minor
+ * release. `unstableUses` are the diagnostics that found them.
  */
 export const effectRangeFindings = (
   manifest: Manifest,
-  importsUnstableApi: boolean
+  unstableUses: readonly string[]
 ): readonly string[] =>
   Arr.flatMap([manifest.dependencies, manifest.peerDependencies], (group) =>
     group === undefined
@@ -172,91 +196,90 @@ export const effectRangeFindings = (
                 manifest.name,
                 name,
                 group[name] ?? "",
-                importsUnstableApi
+                unstableUses
               )
             : []
         )
   );
 
-const importSpecifier = /(?:from|import)\s*\(?\s*"(?<specifier>[^"]+)"/gu;
+// The authority on "unstable" is `@effect/tsgo` itself: with an empty `allowedUnstableApis` and the two stability
+// diagnostics at error, it reports every member the TypeScript checker resolves to an API that Effect tags
+// `@stability unstable` or `experimental`, however it was imported (a subpath, or the `effect` barrel).
+const stabilityConfig =
+  '{"allowedUnstableApis":[],"diagnosticSeverity":{"experimentalApiUsage":"error","unstableApiUsage":"error"}}';
 
-/** Whether `source` imports an API from `unstable`: a listed specifier, one below it, or any `unstable/` path. */
-export const importsUnstable = (
-  source: string,
-  unstable: readonly string[]
-): boolean =>
-  Arr.some(
-    Arr.filterMap(
-      Arr.fromIterable(Str.matchAll(importSpecifier)(source)),
-      ({ groups }) =>
-        groups?.specifier === undefined
-          ? Result.failVoid
-          : Result.succeed(groups.specifier)
-    ),
-    (specifier) =>
-      Str.includes("/unstable/")(specifier) ||
-      Arr.some(
-        unstable,
-        (api) => specifier === api || Str.startsWith(`${api}/`)(specifier)
-      )
-  );
-
-const TsConfig = Schema.Struct({
-  compilerOptions: Schema.Struct({
-    plugins: Schema.Array(
-      Schema.Struct({
-        allowedUnstableApis: Schema.optional(Schema.Array(Schema.String)),
-      })
-    ),
-  }),
+const Diagnostics = Schema.Struct({
+  diagnostics: Schema.Array(
+    Schema.Struct({ message: Schema.String, name: Schema.String })
+  ),
 });
+
+const decodeDiagnostics = Schema.decodeUnknownEffect(
+  Schema.fromJsonString(Diagnostics)
+);
 
 const decodeManifest = Schema.decodeUnknownEffect(
   Schema.fromJsonString(PackageManifest)
 );
 
-const decodeTsConfig = Schema.decodeUnknownEffect(
-  Schema.fromJsonString(TsConfig)
-);
-
-const publishedSources = (directory: string) =>
-  Effect.gen(function* sources() {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const entries = yield* fs.readDirectory(directory, { recursive: true });
-
-    return Arr.map(
-      Arr.filter(
-        entries,
-        (entry) =>
-          Str.endsWith(".ts")(entry) &&
-          !Str.endsWith(".test.ts")(entry) &&
-          !Str.includes("node_modules")(entry)
-      ),
-      (entry) => path.join(directory, entry)
-    );
-  });
+const stabilityNames = ["unstableApiUsage", "experimentalApiUsage"];
 
 /**
- * Findings for every package under `<root>/packages`: the Effect range of each is checked against the unstable APIs
- * its published sources (not its tests) import. The unstable set is `allowedUnstableApis` of the root tsconfig.
+ * The unstable or experimental Effect APIs the published sources (`src`, tests excluded) of one package use, as the
+ * messages of `effect-tsgo diagnostics` run from `toolRoot` over a scratch tsconfig that extends the package's own.
  */
-export const checkPublishedPackages = (root: string) =>
+const unstableApiUses = (toolRoot: string, packageDirectory: string) =>
+  Effect.gen(function* uses() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const scratch = yield* fs.makeTempDirectoryScoped();
+    const project = path.join(scratch, "tsconfig.json");
+
+    yield* fs.writeFileString(
+      project,
+      `{"extends":"${path.join(packageDirectory, "tsconfig.json")}","include":["${path.join(packageDirectory, "src", "**", "*.ts")}"],"exclude":["${path.join(packageDirectory, "src", "**", "*.test.ts")}"]}`
+    );
+
+    const output = yield* spawner.string(
+      ChildProcess.make(
+        "bunx",
+        [
+          "effect-tsgo",
+          "diagnostics",
+          "--project",
+          project,
+          "--lspconfig",
+          stabilityConfig,
+          "--format",
+          "json",
+        ],
+        { cwd: toolRoot }
+      )
+    );
+
+    const { diagnostics } = yield* decodeDiagnostics(output);
+
+    return Arr.map(
+      Arr.filter(diagnostics, (diagnostic) =>
+        Arr.contains(stabilityNames, diagnostic.name)
+      ),
+      (diagnostic) => diagnostic.message
+    );
+  }).pipe(Effect.scoped);
+
+/**
+ * Findings for every package under `<packagesRoot>/packages`: the Effect range of each is checked against the unstable
+ * APIs its published sources use. `toolRoot` is the directory `effect-tsgo` is installed in (the repository root).
+ */
+export const checkPublishedPackages = (
+  packagesRoot: string,
+  toolRoot: string
+) =>
   Effect.gen(function* check() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-
-    const tsconfig = yield* decodeTsConfig(
-      yield* fs.readFileString(path.join(root, "tsconfig.json"))
-    );
-
-    const unstable = Arr.flatMap(
-      tsconfig.compilerOptions.plugins,
-      (plugin) => plugin.allowedUnstableApis ?? []
-    );
-
-    const packagesDirectory = path.join(root, "packages");
-
+    const packagesDirectory = path.join(packagesRoot, "packages");
     const names = yield* fs.readDirectory(packagesDirectory);
 
     const perPackage = yield* Effect.forEach(names, (name) =>
@@ -267,15 +290,9 @@ export const checkPublishedPackages = (root: string) =>
           yield* fs.readFileString(path.join(directory, "package.json"))
         );
 
-        const files = yield* publishedSources(path.join(directory, "src"));
-
-        const texts = yield* Effect.forEach(files, (file) =>
-          fs.readFileString(file)
-        );
-
         return effectRangeFindings(
           manifest,
-          Arr.some(texts, (text) => importsUnstable(text, unstable))
+          yield* unstableApiUses(toolRoot, directory)
         );
       })
     );

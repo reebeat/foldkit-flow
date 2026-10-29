@@ -2,7 +2,7 @@
 
 The development lifecycle (spec 0000) is copied from [`reebeat/studio`](https://github.com/reebeat/studio) at commit `b26c1cc` (`main`, 2026-10-29, the squash of its spec 0000, whose tree equals the reviewed head `643096ea`; the source repository). studio copied it from [`reebeat/reebeat`](https://github.com/reebeat/reebeat) at `f7c348877585f54b6bf00651608726dd7e5044d3`, and most of reebeat's own files were adapted from [`phibkro/vektorprogrammet-reimagined`](https://github.com/phibkro/vektorprogrammet-reimagined) at `797e9e41d96194b9479ff224ac1c40bbc0545888` (the donor); the headers that name those sources were kept. Third-party licences stay with their code.
 
-**Identical** means the file's git blob hash equals the source's, checked with `git hash-object <file>` against `git rev-parse b26c1cc:<file>` in a studio checkout (66 files).
+**Identical** means the file's git blob hash equals the source's, checked with `git hash-object <file>` against `git rev-parse b26c1cc:<file>` in a studio checkout (70 files: 66 at the same path, and the 4 under `apps/example/` that the table marks identical, compared with `apps/editor/`).
 
 | File | Source (studio `b26c1cc`) | Deviation |
 | --- | --- | --- |
@@ -19,8 +19,8 @@ The development lifecycle (spec 0000) is copied from [`reebeat/studio`](https://
 | `.gitleaks.toml` | same path | title |
 | `knip.json` | same path | workspaces `apps/example`, `packages/flow`, `tools/quality` |
 | `.github/workflows/checks.yml` | same path | header only |
-| `apps/example/vite.config.ts`, `index.html`, `package.json`, `tsconfig.json`, `src/application.ts`, `entry.ts`, `vitestSetup.ts`, `styles.css`, `boot.test.ts` | `apps/editor/` of the same names | renamed (`editorApplication` to `exampleApplication`, title), a workspace dependency on `foldkit-flow`; `boot.test.ts` follows the new view |
-| `apps/example/FOLDKIT.md` | `apps/editor/FOLDKIT.md` | identical (Foldkit owns it, replaced whole on upgrade) |
+| `apps/example/vite.config.ts`, `index.html`, `package.json`, `src/application.ts`, `entry.ts`, `boot.test.ts` | `apps/editor/` of the same names | renamed (`editorApplication` to `exampleApplication`, title), a workspace dependency on `foldkit-flow`; `boot.test.ts` follows the new view |
+| `apps/example/tsconfig.json`, `src/vitestSetup.ts`, `src/styles.css`, `FOLDKIT.md` | `apps/editor/` of the same names | identical (`FOLDKIT.md` is Foldkit's, replaced whole on upgrade) |
 | `apps/example/src/main.ts`, `story.test.ts`, `scene.test.ts`, `testModels.ts` | `apps/editor/src/` of the same names | rewritten for the scaffold: a toggle for the xyflow attribution replaces the inspector toggle |
 | `AGENTS.md`, `STATE.md`, `README.md`, `apps/example/AGENTS.md` | same paths | rewritten for this repository |
 | `docs/specs/0000-development-lifecycle.md` | same path | rewritten: it records what is the same, what differs and why |

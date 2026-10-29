@@ -5,7 +5,6 @@ import { Effect, FileSystem, Path } from "effect";
 import {
   checkPublishedPackages,
   effectRangeFindings,
-  importsUnstable,
 } from "../publishedEffectRange.ts";
 
 const manifest = (effect: string) => ({
@@ -13,42 +12,55 @@ const manifest = (effect: string) => ({
   peerDependencies: { effect },
 });
 
+const unstableUse = ["`effect/FileSystem#FileSystem` is an unstable API."];
+
 describe("effectRangeFindings", () => {
   it("lets a package that uses only stable APIs take the next minor", () => {
-    assert.deepStrictEqual(effectRangeFindings(manifest("^4.1.0"), false), []);
+    assert.deepStrictEqual(effectRangeFindings(manifest("^4.1.0"), []), []);
   });
 
-  it("refuses a caret range when the package imports an unstable API", () => {
-    assert.deepStrictEqual(effectRangeFindings(manifest("^4.1.0"), true), [
-      'pkg: effect "^4.1.0" must stay below 4.2.0 (use ~4.1.0) because the package imports an unstable Effect API',
-    ]);
+  it("refuses a caret range when the package uses an unstable API", () => {
+    assert.deepStrictEqual(
+      effectRangeFindings(manifest("^4.1.0"), unstableUse),
+      [
+        'pkg: effect "^4.1.0" must stay below 4.2.0 (use ~4.1.0) because the package uses unstable or experimental Effect APIs: `effect/FileSystem#FileSystem` is an unstable API.',
+      ]
+    );
   });
 
-  it("refuses an open lower bound when the package imports an unstable API", () => {
+  it("refuses an open lower bound when the package uses an unstable API", () => {
     assert.strictEqual(
-      effectRangeFindings(manifest(">=4.1.0"), true).length,
+      effectRangeFindings(manifest(">=4.1.0"), unstableUse).length,
       1
     );
   });
 
-  it("accepts a tilde range, an exact version and a bounded range for an unstable import", () => {
-    assert.deepStrictEqual(effectRangeFindings(manifest("~4.1.0"), true), []);
-    assert.deepStrictEqual(effectRangeFindings(manifest("4.1.3"), true), []);
+  it("accepts a tilde range, an exact version and a bounded range for an unstable use", () => {
     assert.deepStrictEqual(
-      effectRangeFindings(manifest(">=4.1.0 <4.2.0"), true),
+      effectRangeFindings(manifest("~4.1.0"), unstableUse),
+      []
+    );
+
+    assert.deepStrictEqual(
+      effectRangeFindings(manifest("4.1.3"), unstableUse),
+      []
+    );
+
+    assert.deepStrictEqual(
+      effectRangeFindings(manifest(">=4.1.0 <4.2.0"), unstableUse),
       []
     );
   });
 
   it("refuses a range that reaches the minor after the floor even when bounded", () => {
     assert.strictEqual(
-      effectRangeFindings(manifest(">=4.1.0 <4.3.0"), true).length,
+      effectRangeFindings(manifest(">=4.1.0 <4.3.0"), unstableUse).length,
       1
     );
   });
 
   it("refuses a floor below 4.1.0", () => {
-    assert.deepStrictEqual(effectRangeFindings(manifest("~4.0.2"), false), [
+    assert.deepStrictEqual(effectRangeFindings(manifest("~4.0.2"), []), [
       'pkg: effect "~4.0.2" starts below 4.1.0',
     ]);
   });
@@ -56,63 +68,48 @@ describe("effectRangeFindings", () => {
   it("applies to @effect/* runtime packages and to dependencies, not to test tooling", () => {
     const wide = {
       dependencies: { "@effect/platform-browser": "^4.1.0" },
-      devDependencies: { "@effect/vitest": "^4.0.0" },
       name: "pkg",
       peerDependencies: { "@effect/vitest": "^4.0.0" },
     };
 
-    assert.deepStrictEqual(effectRangeFindings(wide, true), [
-      'pkg: @effect/platform-browser "^4.1.0" must stay below 4.2.0 (use ~4.1.0) because the package imports an unstable Effect API',
+    assert.deepStrictEqual(effectRangeFindings(wide, unstableUse), [
+      'pkg: @effect/platform-browser "^4.1.0" must stay below 4.2.0 (use ~4.1.0) because the package uses unstable or experimental Effect APIs: `effect/FileSystem#FileSystem` is an unstable API.',
     ]);
   });
 
   it("reports a range it cannot read instead of passing it", () => {
-    assert.strictEqual(
-      effectRangeFindings(manifest("catalog:"), false).length,
-      1
+    assert.strictEqual(effectRangeFindings(manifest("catalog:"), []).length, 1);
+  });
+
+  it("reports a range with an unparsed tail after a lower bound", () => {
+    assert.deepStrictEqual(
+      effectRangeFindings(manifest(">=4.1.0 || ^3.0.0"), []),
+      [
+        'pkg: effect ">=4.1.0 || ^3.0.0" is not a range this check reads (^, ~, exact, or >= with an optional < bound)',
+      ]
     );
   });
 });
 
-describe("importsUnstable", () => {
-  const unstable = ["effect/FileSystem", "effect/cli"];
+const repositoryRoot = Effect.gen(function* root() {
+  const path = yield* Path.Path;
 
-  it("finds a listed specifier, one below it and any unstable/ path", () => {
-    assert.isTrue(
-      importsUnstable('import { x } from "effect/FileSystem";', unstable)
-    );
-    assert.isTrue(
-      importsUnstable('import { x } from "effect/cli/Command";', unstable)
-    );
-    assert.isTrue(
-      importsUnstable('import { x } from "effect/unstable/http";', unstable)
-    );
-    assert.isTrue(
-      importsUnstable('const m = await import("effect/FileSystem");', unstable)
-    );
-  });
-
-  it("ignores stable imports and look-alike prefixes", () => {
-    assert.isFalse(
-      importsUnstable('import { Effect } from "effect";', unstable)
-    );
-    assert.isFalse(
-      importsUnstable('import { x } from "effect/FileSystemX";', unstable)
-    );
-  });
+  return yield* path.fromFileUrl(new URL("../../../", import.meta.url));
 });
 
-const writeTree = (root: string, effect: string, source: string) =>
+// A package `lib` in a temporary root. Its `node_modules` is a link to the library's, so `effect` resolves.
+const writePackage = (root: string, effect: string, source: string) =>
   Effect.gen(function* tree() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const directory = path.join(root, "packages", "lib");
+    const repository = yield* repositoryRoot;
 
     yield* fs.makeDirectory(path.join(directory, "src"), { recursive: true });
 
-    yield* fs.writeFileString(
-      path.join(root, "tsconfig.json"),
-      '{"compilerOptions":{"plugins":[{"allowedUnstableApis":["effect/FileSystem"]}]}}'
+    yield* fs.symlink(
+      path.join(repository, "packages", "flow", "node_modules"),
+      path.join(directory, "node_modules")
     );
 
     yield* fs.writeFileString(
@@ -120,53 +117,77 @@ const writeTree = (root: string, effect: string, source: string) =>
       `{"name":"lib","peerDependencies":{"effect":"${effect}"}}`
     );
 
+    yield* fs.writeFileString(
+      path.join(directory, "tsconfig.json"),
+      '{"compilerOptions":{"plugins":[{"name":"@effect/language-service"}],"module":"nodenext","moduleResolution":"nodenext","strict":true,"noEmit":true,"allowImportingTsExtensions":true},"include":["src/**/*.ts"]}'
+    );
+
     yield* fs.writeFileString(path.join(directory, "src", "index.ts"), source);
   });
+
+const barrelImport =
+  'import { FileSystem } from "effect";\n\nexport const fileSystemTag = FileSystem.FileSystem;\n';
+
+const subpathImport =
+  'import { FileSystem } from "effect/FileSystem";\n\nexport const fileSystemTag = FileSystem.FileSystem;\n';
+
+const stableImport =
+  'import { Effect } from "effect";\n\nexport const noop = Effect.void;\n';
+
+const findingsOf = (effect: string, source: string) =>
+  Effect.gen(function* findings() {
+    const fs = yield* FileSystem.FileSystem;
+    const root = yield* fs.makeTempDirectoryScoped();
+
+    yield* writePackage(root, effect, source);
+
+    return yield* checkPublishedPackages(root, yield* repositoryRoot);
+  }).pipe(Effect.provide(NodeServices.layer));
 
 describe("checkPublishedPackages", () => {
   it.effect("passes on the packages of this repository", () =>
     Effect.gen(function* repository() {
-      const path = yield* Path.Path;
+      const root = yield* repositoryRoot;
 
-      const findings = yield* checkPublishedPackages(
-        yield* path.fromFileUrl(new URL("../../../", import.meta.url))
-      );
-
-      assert.deepStrictEqual(findings, []);
+      assert.deepStrictEqual(yield* checkPublishedPackages(root, root), []);
     }).pipe(Effect.provide(NodeServices.layer))
   );
 
   it.effect(
-    "fails a package that imports an unstable API under a caret range",
+    "fails a package that uses an unstable API imported from the effect barrel under a caret range",
     () =>
-      Effect.gen(function* caret() {
-        const fs = yield* FileSystem.FileSystem;
-        const root = yield* fs.makeTempDirectoryScoped();
+      Effect.gen(function* barrel() {
+        const findings = yield* findingsOf("^4.1.0", barrelImport);
 
-        yield* writeTree(
-          root,
-          "^4.1.0",
-          'import { FileSystem } from "effect/FileSystem";\nexport { FileSystem };\n'
+        assert.strictEqual(findings.length, 1);
+        assert.include(
+          findings[0],
+          'lib: effect "^4.1.0" must stay below 4.2.0'
         );
-
-        assert.deepStrictEqual(yield* checkPublishedPackages(root), [
-          'lib: effect "^4.1.0" must stay below 4.2.0 (use ~4.1.0) because the package imports an unstable Effect API',
-        ]);
-      }).pipe(Effect.provide(NodeServices.layer))
+        assert.include(findings[0], "effect/FileSystem#FileSystem");
+      })
   );
 
-  it.effect("passes the same package under a tilde range", () =>
-    Effect.gen(function* tilde() {
-      const fs = yield* FileSystem.FileSystem;
-      const root = yield* fs.makeTempDirectoryScoped();
-
-      yield* writeTree(
-        root,
-        "~4.1.0",
-        'import { FileSystem } from "effect/FileSystem";\nexport { FileSystem };\n'
+  it.effect("fails the same use imported from its subpath", () =>
+    Effect.gen(function* subpath() {
+      assert.strictEqual(
+        (yield* findingsOf("^4.1.0", subpathImport)).length,
+        1
       );
+    })
+  );
 
-      assert.deepStrictEqual(yield* checkPublishedPackages(root), []);
-    }).pipe(Effect.provide(NodeServices.layer))
+  it.effect("passes the same use under a tilde range", () =>
+    Effect.gen(function* tilde() {
+      assert.deepStrictEqual(yield* findingsOf("~4.1.0", barrelImport), []);
+    })
+  );
+
+  it.effect(
+    "passes a package that uses only stable APIs under a caret range",
+    () =>
+      Effect.gen(function* stable() {
+        assert.deepStrictEqual(yield* findingsOf("^4.1.0", stableImport), []);
+      })
   );
 });
