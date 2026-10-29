@@ -28,7 +28,7 @@ export const handleSize = 10;
 
 export const zoomStep = 1.2;
 
-export const fitPadding = 0.1;
+const fitPadding = 0.1;
 
 const sides: readonly Side[] = ["Top", "Right", "Bottom", "Left"];
 

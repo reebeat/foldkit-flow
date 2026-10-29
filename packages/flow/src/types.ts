@@ -26,9 +26,9 @@ export const Side = Schema.Literals(["Top", "Right", "Bottom", "Left"]);
 
 export type Side = typeof Side.Type;
 
-export const HandleKind = Schema.Literals(["source", "target"]);
+const HandleKind = Schema.Literals(["source", "target"]);
 
-export type HandleKind = typeof HandleKind.Type;
+type HandleKind = typeof HandleKind.Type;
 
 /** A port on a node: where a connection starts (`source`) or ends (`target`), on which side of the node. */
 export const HandleDef = Schema.Struct({

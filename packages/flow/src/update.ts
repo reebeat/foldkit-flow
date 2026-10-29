@@ -138,12 +138,18 @@ const moveBox = (model: Model, point: XY): Model =>
     () => model
   );
 
-const endBox = (model: Model): Return =>
-  withSelectionChange(
-    model,
-    modifyFields(model, { interaction: () => Interaction.Idle() }),
-    `${plural(selectedNodeIds(model.nodes).length, "node")} selected`
-  );
+// The selection changed live while the box was dragged, so the box reports its final selection when it ends.
+const endBox = (model: Model): Return => ({
+  model: modifyFields(model, {
+    announcement: () =>
+      `${plural(selectedNodeIds(model.nodes).length, "node")} selected`,
+    interaction: () => Interaction.Idle(),
+  }),
+  outMessage: OutMessage.ChangedSelection({
+    edgeIds: selectedEdgeIds(model.edges),
+    nodeIds: selectedNodeIds(model.nodes),
+  }),
+});
 
 // DRAG
 

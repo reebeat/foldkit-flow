@@ -6,7 +6,7 @@ export {
   defaultAttribution,
 } from "./attribution.ts";
 
-export { makeFlow } from "./flow.ts";
+export { defineFlow } from "./flow.ts";
 
 export { Message, OutMessage } from "./message.ts";
 

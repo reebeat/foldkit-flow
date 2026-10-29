@@ -7,7 +7,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./flow.css": "./src/flow.css"
+    "./flow.css": "./src/flow.css",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "test": "vp test run"

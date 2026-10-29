@@ -1,1 +1,23 @@
 @import "tailwindcss";
+@import "foldkit-flow/flow.css";
+
+.state-title,
+.scene-title {
+  align-items: center;
+  display: flex;
+  font-size: 14px;
+  height: 100%;
+  justify-content: center;
+}
+
+.scene-title {
+  align-items: flex-start;
+  color: #475569;
+  font-weight: 600;
+  justify-content: flex-start;
+  padding: 6px 10px;
+}
+
+.foldkit-flow__node[data-type="scene"] {
+  background: #f1f5f9;
+}
