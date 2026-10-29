@@ -43,7 +43,7 @@ export interface Limits {
 }
 
 /** The operator's headroom limits for a heavy job (2026-10-29), and the load limit above. */
-export const limits: Limits = {
+const limits: Limits = {
   demandMiB: 2048,
   loadPerCore: 0.5,
   memoryFreeAfterPercent: 20,
@@ -190,10 +190,7 @@ export const assess = (
 };
 
 /** What a refusal says: `inconclusive: host busy (load X)` with the reasons. */
-export const inconclusive = (
-  readings: Readings,
-  reasons: readonly string[]
-) => {
+const inconclusive = (readings: Readings, reasons: readonly string[]) => {
   const load = Option.match(readings.load1, {
     onNone: () => "unreadable",
     onSome: (value) => `${value}`,
