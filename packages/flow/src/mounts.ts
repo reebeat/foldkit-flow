@@ -1,11 +1,4 @@
-import {
-  ConnectionMode,
-  PanOnScrollMode,
-  XYDrag,
-  XYHandle,
-  XYMinimap,
-  XYPanZoom,
-} from "@xyflow/system";
+import { ConnectionMode, PanOnScrollMode } from "@xyflow/system";
 import type {
   Connection as XyConnection,
   ConnectionInProgress,
@@ -28,6 +21,7 @@ import {
 } from "./selection.ts";
 import {
   boundsOf,
+  controllersOf,
   handleClass,
   paneOf,
   readSnapshot,
@@ -35,6 +29,7 @@ import {
 } from "./snapshot.ts";
 import type { FlowSnapshot } from "./snapshot.ts";
 import type { Connection, FlowEdge, FlowNode, Viewport, XY } from "./types.ts";
+import type { Controllers } from "./xyflow.ts";
 
 // MOUNTS
 //
@@ -164,7 +159,7 @@ const startPanZoom = (element: Element, send: Send<PaneMessage>) => {
 
   const flow = Option.map(readSnapshot(element), (snapshot) => snapshot.flow);
 
-  const controller = XYPanZoom({
+  const controller = controllersOf(element).XYPanZoom({
     domNode: element,
     maxZoom: Option.match(flow, { onNone: () => 4, onSome: (f) => f.maxZoom }),
     minZoom: Option.match(flow, {
@@ -393,7 +388,7 @@ const startDrag = (
 ) => {
   const pane = paneOf(element);
 
-  const controller = XYDrag({
+  const controller = controllersOf(element).XYDrag({
     getStoreItems: () => {
       const nodes: readonly FlowNode[] = Option.match(readSnapshot(element), {
         onNone: () => [],
@@ -545,7 +540,7 @@ type ConnectMessage = Extract<
 >;
 
 // The options of a connection gesture; xyflow does not export the type, so it is read off the controller.
-type HandleParams = Parameters<typeof XYHandle.onPointerDown>[1];
+type HandleParams = Parameters<Controllers["onPointerDown"]>[1];
 
 interface ActiveConnection {
   fromHandle: Handle | null;
@@ -654,7 +649,7 @@ const beginConnection = (
 
   trackPress(element.ownerDocument, active);
 
-  XYHandle.onPointerDown(
+  controllersOf(element).onPointerDown(
     event,
     from.edgeId === undefined
       ? params
@@ -762,7 +757,7 @@ export const FlowReconnect = Mount.defineStream("FlowReconnect", {
 // MINIMAP: pan and zoom the flow from the minimap (XYMinimap drives the pane's XYPanZoom).
 
 const startMinimap = (element: Element, controller: PanZoomInstance) => {
-  const instance = XYMinimap({
+  const instance = controllersOf(element).XYMinimap({
     domNode: element,
     getTransform: () => transformOf(element),
     getViewScale: () =>

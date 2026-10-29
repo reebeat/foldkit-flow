@@ -67,6 +67,8 @@ What the Flow gives you: custom node views, handles, three edge types with an op
 
 **Large graphs.** `renderNode` runs for every node on every render. Return a memoised VNode (a module-level `createKeyedLazy` slot keyed by `node.id`, as `apps/example/src/main.ts` does) so an unchanged node costs nothing; the Flow memoises the node frame and the edges itself.
 
+**Controller factories are a dependency.** The Mounts call `XYPanZoom`, `XYDrag`, `XYMinimap` and `XYHandle.onPointerDown` through the `Controllers` the Flow is given: `Flow.defineFlow(options, controllers)`, defaulting to `Flow.xyflowControllers` (the real `@xyflow/system`). A test passes factories that wrap the real ones and record each `destroy`; no module is mocked.
+
 ## Accessibility
 
 - The canvas has role `application` with the accessible name you pass as `ariaLabel`, and an instructions text it is described by.

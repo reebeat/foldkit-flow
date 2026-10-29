@@ -8,6 +8,8 @@ import type {
   Size,
   Viewport,
 } from "./types.ts";
+import type { Controllers } from "./xyflow.ts";
+import { xyflowControllers } from "./xyflow.ts";
 
 // A Mount captures its arguments once, when its element is inserted, so a controller cannot learn that the Model
 // changed through them. The pure view therefore publishes what the controllers read as a property of the pane element,
@@ -24,15 +26,18 @@ export interface SnapshotFlow {
   readonly viewport: Viewport;
 }
 
-/** What a controller may read: the flow's data and the static validation rule. */
+/** What a controller may read: the flow's data, the static validation rule and the controller factories to call. */
 export class FlowSnapshot {
+  readonly controllers: Controllers;
   readonly flow: SnapshotFlow;
   readonly isValidConnection: (connection: Connection) => boolean;
 
   constructor(
     flow: SnapshotFlow,
-    isValidConnection: (connection: Connection) => boolean
+    isValidConnection: (connection: Connection) => boolean,
+    controllers: Controllers
   ) {
+    this.controllers = controllers;
     this.flow = flow;
     this.isValidConnection = isValidConnection;
   }
@@ -87,3 +92,10 @@ export const readSnapshot = (element: Element): Option.Option<FlowSnapshot> => {
     ? Option.some(snapshot)
     : Option.none();
 };
+
+/** The controller factories of the flow that holds `element`; the real xyflow ones before the first render. */
+export const controllersOf = (element: Element): Controllers =>
+  Option.match(readSnapshot(element), {
+    onNone: () => xyflowControllers,
+    onSome: (snapshot) => snapshot.controllers,
+  });

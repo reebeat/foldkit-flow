@@ -33,3 +33,7 @@ export { addEdge, reconnectEdge } from "./update.ts";
 export type { FlowOptions, NewEdge } from "./update.ts";
 
 export type { ViewInputs } from "./view.ts";
+
+export { xyflowControllers } from "./xyflow.ts";
+
+export type { Controllers } from "./xyflow.ts";

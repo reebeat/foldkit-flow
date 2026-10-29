@@ -9,6 +9,8 @@ import { Message, OutMessage } from "./message.ts";
 import { Model } from "./model.ts";
 import { eventually } from "./testing.ts";
 import { addEdge, reconnectEdge } from "./update.ts";
+import { xyflowControllers } from "./xyflow.ts";
+import type { Controllers } from "./xyflow.ts";
 
 // A minimal application that embeds the Flow Submodel, as an application does: it is the host the runtime tests boot.
 // It records the tags of the out-messages it receives, adds the edge a `Connected` describes, and moves the end of an
@@ -26,10 +28,6 @@ const HostMessage = defineMessageUnion({
 });
 
 type HostMessage = typeof HostMessage.Type;
-
-const { update: updateFlow, view: viewFlow } = defineFlow({
-  isValidConnection: ({ source, target }) => source !== target,
-});
 
 const withEvent = (model: HostModel, outMessage: OutMessage): HostModel =>
   modifyFields(model, { events: (events) => [...events, outMessage._tag] });
@@ -71,47 +69,55 @@ const foldOutMessage = (
     }),
   });
 
-const foldFlow = Update.foldChild({
-  foldOutMessage,
-  read: (model: HostModel) => Option.some(model.flow),
-  toParentMessage: (message) => HostMessage.GotFlowMessage({ message }),
-  update: updateFlow,
-  write: (model, flow) => modifyFields(model, { flow: () => flow }),
-});
+/** The application the runtime tests boot, with its Model starting from `flow` and its controller factories. */
+export const hostApplication = (
+  container: HTMLElement,
+  flow: Model,
+  controllers: Controllers = xyflowControllers
+) => {
+  const { update: updateFlow, view: viewFlow } = defineFlow(
+    { isValidConnection: ({ source, target }) => source !== target },
+    controllers
+  );
 
-const hostUpdate = (model: HostModel, message: HostMessage) =>
-  HostMessage.match<Update.Return<HostModel, HostMessage>>(message, {
-    GotFlowMessage: ({ message: flowMessage }) => foldFlow(model, flowMessage),
+  const foldFlow = Update.foldChild({
+    foldOutMessage,
+    read: (model: HostModel) => Option.some(model.flow),
+    toParentMessage: (message) => HostMessage.GotFlowMessage({ message }),
+    update: updateFlow,
+    write: (model, next) => modifyFields(model, { flow: () => next }),
   });
 
-const hostView = (model: HostModel, h: HtmlBuilder<HostMessage>): Document => ({
-  body: h.div(
-    [h.Style({ height: "600px", width: "800px" })],
-    [
-      h.submodel({
-        model: model.flow,
-        slotId: "flow",
-        toParentMessage: (message) => HostMessage.GotFlowMessage({ message }),
-        view: viewFlow,
-        viewInputs: {
-          ariaLabel: "Test graph",
-          renderNode: (node) => h.div([], [node.label]),
-        },
-      }),
-    ]
-  ),
-  title: "host",
-});
-
-/** The application the runtime tests boot, with its Model starting from `flow`. */
-export const hostApplication = (container: HTMLElement, flow: Model) =>
-  Runtime.makeApplication({
+  return Runtime.makeApplication({
     Model: HostModel,
     container,
     init: () => ({ model: { events: Array.empty<string>(), flow } }),
-    update: hostUpdate,
-    view: hostView,
+    update: (model: HostModel, message: HostMessage) =>
+      HostMessage.match<Update.Return<HostModel, HostMessage>>(message, {
+        GotFlowMessage: ({ message: flowMessage }) =>
+          foldFlow(model, flowMessage),
+      }),
+    view: (model: HostModel, h: HtmlBuilder<HostMessage>): Document => ({
+      body: h.div(
+        [h.Style({ height: "600px", width: "800px" })],
+        [
+          h.submodel({
+            model: model.flow,
+            slotId: "flow",
+            toParentMessage: (message) =>
+              HostMessage.GotFlowMessage({ message }),
+            view: viewFlow,
+            viewInputs: {
+              ariaLabel: "Test graph",
+              renderNode: (node) => h.div([], [node.label]),
+            },
+          }),
+        ]
+      ),
+      title: "host",
+    }),
   });
+};
 
 /** A fresh wrapper around a container with an id: the runtime replaces the container, never the wrapper. */
 export const mountPoint = () => {
@@ -145,12 +151,14 @@ export const runHost = (flow: Model) =>
  * Boots the host with `Runtime.embed` for the surrounding scope (disposed when it closes), and returns its wrapper once
  * the nodes are rendered and the Mounts have had time to acquire their controllers.
  */
-export const embedHost = (flow: Model) =>
+export const embedHost = (flow: Model, controllers?: Controllers) =>
   Effect.gen(function* embed() {
     const { container, wrapper } = mountPoint();
 
     yield* Effect.acquireRelease(
-      Effect.sync(() => Runtime.embed(hostApplication(container, flow))),
+      Effect.sync(() =>
+        Runtime.embed(hostApplication(container, flow, controllers))
+      ),
       (handle) =>
         Effect.sync(() => {
           handle.dispose();

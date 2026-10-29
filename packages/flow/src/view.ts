@@ -35,6 +35,7 @@ import {
 import { Interaction } from "./types.ts";
 import type { ConnectionDraft, FlowEdge, FlowNode, XY } from "./types.ts";
 import type { FlowOptions } from "./update.ts";
+import type { Controllers } from "./xyflow.ts";
 
 // VIEW
 //
@@ -555,8 +556,11 @@ const paneClassFor = (model: Model) =>
     () => paneClass
   );
 
-/** Makes the Flow's view, bound to its static rules (the snapshot carries `isValidConnection` to the controllers). */
-export const flowView = (options: FlowOptions) =>
+/**
+ * Makes the Flow's view, bound to its static rules and to the controller factories (the snapshot carries
+ * `isValidConnection` and the factories to the Mounts).
+ */
+export const flowView = (options: FlowOptions, controllers: Controllers) =>
   defineView<Model, Message, ViewInputs>((model, viewInputs, h) => {
     const absolutes = absolutePositions(model.nodes);
     const pane = paneElement.withMessage(h);
@@ -584,7 +588,8 @@ export const flowView = (options: FlowOptions) =>
         size: model.size,
         viewport: model.viewport,
       },
-      options.isValidConnection
+      options.isValidConnection,
+      controllers
     );
 
     return h.div(
