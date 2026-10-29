@@ -15,14 +15,14 @@ The development lifecycle (spec 0000) is copied from [`reebeat/studio`](https://
 | `tools/quality/publishedEffectRange.ts`, `test/publishedEffectRange.test.ts` | new | written here (spec 0000, "The published Effect range") |
 | `tools/quality/package.json` | same path | name `@foldkit-flow/quality` |
 | `tools/oxlint/anti-slop/**` | same path | identical; `UPSTREAM.txt` keeps the chain (dmmulroy/anti-slop `c44ef22`, mono-web `2aa6ce9`, the donor) |
-| `vite.config.ts` | same path | Effect groups and Foldkit rule overrides name `apps/example` and `packages/flow` (library role `effect-library`, browser); the restricted source-import patterns name `@foldkit-flow/` and `packages` |
+| `vite.config.ts` | same path | Effect groups and Foldkit rule overrides name `apps/example` and `packages/flow` (library role `effect-library`, browser) and `tools/quality`, `tools/journey` (node; `probe.ts` browser); `typescript/promise-function-async` is off for the two journey files (reason in the file); the restricted source-import patterns name `@foldkit-flow/` and `packages` |
 | `package.json` | same path | name, workspaces (`apps/*`, `packages/*`, `tools/*`) |
 | `.gitleaks.toml` | same path | title |
-| `knip.json` | same path | workspaces `apps/example`, `packages/flow`, `tools/quality` |
+| `knip.json` | same path | workspaces `apps/example`, `packages/flow`, `tools/quality`, `tools/journey` |
 | `.github/workflows/checks.yml` | same path | header only |
 | `apps/example/vite.config.ts`, `index.html`, `package.json`, `src/application.ts`, `entry.ts`, `boot.test.ts` | `apps/editor/` of the same names | renamed (`editorApplication` to `exampleApplication`, title), a workspace dependency on `foldkit-flow`; `boot.test.ts` follows the new view |
 | `apps/example/tsconfig.json`, `src/vitestSetup.ts`, `src/styles.css`, `FOLDKIT.md` | `apps/editor/` of the same names | identical (`FOLDKIT.md` is Foldkit's, replaced whole on upgrade) |
-| `apps/example/src/main.ts`, `story.test.ts`, `scene.test.ts`, `testModels.ts` | `apps/editor/src/` of the same names | rewritten for the scaffold: a toggle for the xyflow attribution replaces the inspector toggle |
+| `apps/example/src/main.ts`, `story.test.ts`, `testModels.ts`; `graphs.ts` (new) | `apps/editor/src/` of the same names | rewritten for the Flow: the Flow Submodel with graph, attribution toggle and an event log; `scene.test.ts` is dropped (the Scene harness stubs Mounts: the view is tested with a real runtime in `packages/flow/src/runtime.test.ts`) |
 | `AGENTS.md`, `STATE.md`, `README.md`, `apps/example/AGENTS.md` | same paths | rewritten for this repository |
 | `docs/specs/0000-development-lifecycle.md` | same path | rewritten: it records what is the same, what differs and why |
 
@@ -34,4 +34,6 @@ Not copied: `docs/design/lenses.md` and spec 0001 of studio (studio's own), and 
 
 ## Third-party code this repository depends on
 
-`@xyflow/system` (MIT, Copyright (c) 2019-2025 webkid GmbH, <https://github.com/xyflow/xyflow>) is installed from npm when spec 0001 lands; it is credited in `README.md` and `NOTICE`.
+`@xyflow/system` 0.0.83 (MIT, Copyright (c) 2019-2025 webkid GmbH, <https://github.com/xyflow/xyflow>) is installed from npm and drives the pan and zoom, drag, handle and minimap controllers and the edge-path and graph utilities; the handle DOM contract (class `foldkit-flow__handle`, `data-nodeid`, `data-handleid`, `data-id`) and the controller calls follow the package's own types and source (`dist/esm`), which is the only xyflow code read; no xyflow source file is copied. Its d3 dependencies (`d3-zoom`, `d3-drag`, `d3-selection`, `d3-interpolate`; ISC, Copyright Mike Bostock) come with it; `packages/flow` lists `d3-selection` 3.0.0 itself, to remove the d3-zoom bindings a controller leaves on an element. It is credited in `README.md` and `NOTICE`.
+
+`puppeteer-core` 25.16.0 (Apache-2.0, <https://github.com/puppeteer/puppeteer>) is a dependency of `tools/journey` only (the browser gate); it is not part of the library and is not shipped.
