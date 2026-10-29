@@ -2,7 +2,7 @@
 
 The development lifecycle (spec 0000) is copied from [`reebeat/studio`](https://github.com/reebeat/studio) at commit `b26c1cc` (`main`, 2026-10-29, the squash of its spec 0000, whose tree equals the reviewed head `643096ea`; the source repository). studio copied it from [`reebeat/reebeat`](https://github.com/reebeat/reebeat) at `f7c348877585f54b6bf00651608726dd7e5044d3`, and most of reebeat's own files were adapted from [`phibkro/vektorprogrammet-reimagined`](https://github.com/phibkro/vektorprogrammet-reimagined) at `797e9e41d96194b9479ff224ac1c40bbc0545888` (the donor); the headers that name those sources were kept. Third-party licences stay with their code.
 
-**Identical** means the file's git blob hash equals the source's, checked with `git hash-object <file>` against `git rev-parse b26c1cc:<file>` in a studio checkout (68 files: 64 at the same path, and the 4 under `apps/example/` that the table marks identical, compared with `apps/editor/`).
+**Identical** means the file's git blob hash equals the source's, checked with `git hash-object <file>` against `git rev-parse b26c1cc:<file>` in a studio checkout (67 files: 63 at the same path, and the 4 under `apps/example/` that the table marks identical, compared with `apps/editor/`).
 
 | File | Source (studio `b26c1cc`) | Deviation |
 | --- | --- | --- |
@@ -10,8 +10,8 @@ The development lifecycle (spec 0000) is copied from [`reebeat/studio`](https://
 | `commitlint.config.ts`, `.jscpd.json`, `devenv.nix`, `devenv.yaml`, `devenv.lock`, `tsconfig.json`, `CLAUDE.md` | same paths | identical |
 | `.agents/skills/review-pr/record-round.sh`, `merge.sh` | same paths | identical |
 | `.agents/skills/review-pr/SKILL.md`, `.agents/skills/pr-create/SKILL.md` | same paths | a new provenance header and a description that names this repository; `pr-create` drops the sentence that points at reebeat's glossary |
-| `tools/quality/*.ts` except `effectExceptions.ts`, `tools/quality/effect-exceptions.json`, `tools/quality/tsconfig.json`, `tools/quality/vite.config.ts`, `tools/quality/test/*` except `effectExceptions.test.ts` | same paths | identical (the registry is empty in both) |
-| `tools/quality/effectExceptions.ts`, `test/effectExceptions.test.ts` | same paths | `@effect-diagnostics` and `@effect-diagnostics-next-line` join the suppression directives the checker registers (`directivePattern`), with two tests; in `reebeat/studio` and `reebeat/reebeat` the checker does not know them, so an in-source switch-off of `unstableApiUsage` there is unregistered and unseen (the lead filed the issues) |
+| `tools/quality/*.ts` except `effectExceptions.ts`, `tools/quality/tsconfig.json`, `tools/quality/vite.config.ts`, `tools/quality/test/*` except `effectExceptions.test.ts` | same paths | identical |
+| `tools/quality/effectExceptions.ts`, `test/effectExceptions.test.ts`, `effect-exceptions.json` | same paths | `@effect-diagnostics` and `@effect-diagnostics-next-line` join the suppression directives the checker registers (`directivePattern`), with two tests; the registry's `description` lists `@effect-diagnostics` and says a published package may not carry one (the registry is empty in both); in `reebeat/studio` and `reebeat/reebeat` the checker does not know them, so an in-source switch-off of `unstableApiUsage` there is unregistered and unseen (the lead filed the issues) |
 | `tools/quality/publishedEffectRange.ts`, `test/publishedEffectRange.test.ts` | new | written here (spec 0000, "The published Effect range") |
 | `tools/quality/package.json` | same path | name `@foldkit-flow/quality` |
 | `tools/oxlint/anti-slop/**` | same path | identical; `UPSTREAM.txt` keeps the chain (dmmulroy/anti-slop `c44ef22`, mono-web `2aa6ce9`, the donor) |

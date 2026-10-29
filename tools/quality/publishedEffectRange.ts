@@ -269,14 +269,14 @@ const unstableApiUses = (toolRoot: string, packageDirectory: string) =>
     );
   }).pipe(Effect.scoped);
 
-// The in-source `effect-diagnostics` directives (file form and next-line form) can switch a stability diagnostic off,
-// and the diagnostics run honours them, so they would hide an unstable use from it. A published package may not.
-const hidingDirective =
-  /@effect-diagnostics(?:-next-line)?[^\n*]*\b(?:unstableApiUsage|experimentalApiUsage)\s*:\s*(?:off|skip-file)/u;
+// Any in-source `effect-diagnostics` directive can change what the diagnostics run reports: a rule switched off for a
+// line or a file, a wildcard, a lowered severity, a rule name this check has not heard of yet. This check fails closed:
+// a published package carries none (tests are not published and stay exempt), registered or not.
+const diagnosticsDirective = /@effect-diagnostics/u;
 
-/** The `file:line` of every directive in a package's published sources (tests excluded) that hides a stability finding. */
-const hiddenStabilityDirectives = (packageDirectory: string) =>
-  Effect.gen(function* hidden() {
+/** The `file:line` of every directive in a package's published sources (tests excluded). */
+const diagnosticDirectives = (packageDirectory: string) =>
+  Effect.gen(function* directives() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const source = path.join(packageDirectory, "src");
@@ -290,7 +290,7 @@ const hiddenStabilityDirectives = (packageDirectory: string) =>
     const perFile = yield* Effect.forEach(files, (file) =>
       Effect.map(fs.readFileString(path.join(source, file)), (text) =>
         Arr.filterMap(Str.split(text, "\n"), (line, index) =>
-          hidingDirective.test(line)
+          diagnosticsDirective.test(line)
             ? Result.succeed(`src/${file}:${index + 1}`)
             : Result.failVoid
         )
@@ -328,9 +328,9 @@ export const checkPublishedPackages = (
             yield* unstableApiUses(toolRoot, directory)
           ),
           ...Arr.map(
-            yield* hiddenStabilityDirectives(directory),
+            yield* diagnosticDirectives(directory),
             (site) =>
-              `${manifest.name}: ${site} turns off an unstable or experimental API diagnostic; a published package must not hide its unstable use from this check`
+              `${manifest.name}: ${site} has an @effect-diagnostics directive; a published package may not carry any, registered or not, because one can hide its unstable use from this check (any form, rule or severity)`
           ),
         ];
       })

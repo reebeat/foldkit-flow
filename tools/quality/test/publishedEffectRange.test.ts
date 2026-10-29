@@ -201,21 +201,60 @@ describe("checkPublishedPackages", () => {
         );
 
         assert.strictEqual(findings.length, 1);
-        assert.include(findings[0], "lib: src/index.ts:1 turns off");
+        assert.include(
+          findings[0],
+          "lib: src/index.ts:1 has an @effect-diagnostics directive"
+        );
       })
   );
 
-  it.effect(
-    "refuses the same switch-off at file level, for the experimental diagnostic",
-    () =>
-      Effect.gen(function* hidden() {
-        const findings = yield* findingsOf(
-          "^4.1.0",
-          `// @effect-diagnostics experimentalApiUsage:off\n${stableImport}`
-        );
+  it.effect.each([
+    [
+      "a file-level switch-off of the experimental diagnostic",
+      "// @effect-diagnostics experimentalApiUsage:off",
+    ],
+    [
+      "the wildcard switched off for a line",
+      "// @effect-diagnostics-next-line *:off",
+    ],
+    ["the wildcard skipping the file", "// @effect-diagnostics *:skip-file"],
+    [
+      "a named rule unrelated to stability",
+      "// @effect-diagnostics-next-line floatingEffect:off",
+    ],
+    [
+      "a rule name that does not exist yet",
+      "// @effect-diagnostics-next-line futureRuleName:warning",
+    ],
+    ["a lowered severity", "// @effect-diagnostics unstableApiUsage:warning"],
+  ])("refuses %s, with or without an unstable use", ([, directive]) =>
+    Effect.gen(function* anyDirective() {
+      for (const source of [stableImport, barrelImport]) {
+        const findings = yield* findingsOf("~4.1.0", `${directive}\n${source}`);
 
         assert.strictEqual(findings.length, 1);
-        assert.include(findings[0], "turns off");
-      })
+        assert.include(findings[0], "has an @effect-diagnostics directive");
+      }
+    })
+  );
+
+  it.effect("does not look at test files, which are not published", () =>
+    Effect.gen(function* tests() {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const root = yield* fs.makeTempDirectoryScoped();
+
+      yield* writePackage(root, "~4.1.0", stableImport);
+
+      yield* fs.writeFileString(
+        path.join(root, "packages", "lib", "src", "index.test.ts"),
+        "// @effect-diagnostics *:off\nexport const probe = 1;\n"
+      );
+
+      assert.deepStrictEqual(
+        yield* checkPublishedPackages(root, yield* repositoryRoot),
+        []
+      );
+    }).pipe(Effect.provide(NodeServices.layer))
   );
 });
