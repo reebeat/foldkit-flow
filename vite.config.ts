@@ -116,6 +116,10 @@ export default defineConfig({
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
       ...effectConfigResult.jsPlugins,
       {
+        name: "anti-slop-local",
+        specifier: "./tools/oxlint/anti-slop/index.ts",
+      },
+      {
         name: "anti-slop-effect",
         specifier: "./tools/oxlint/anti-slop/effect/index.ts",
       },
@@ -159,6 +163,9 @@ export default defineConfig({
       ...effectConfigResult.rules,
       ...tsgoRules,
       ...localAntiSlopRules,
+      // Ultracite's bundled `anti-slop/no-module-mocking` knows `vi` from `vitest` only, and this repository imports it
+      // from `vite-plus/test`. The vendored copy knows both (UPSTREAM.txt, local changes); it runs under its own name.
+      "anti-slop-local/no-module-mocking": "error",
       "complexity/complexity": ["error", { cognitive: 15 }],
       "no-restricted-imports": [
         "error",

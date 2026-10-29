@@ -2,8 +2,8 @@ import { Effect, Option, Result } from "effect";
 import { describe, expect, test } from "vite-plus/test";
 
 import {
-  admitted,
   assess,
+  judged,
   parseCores,
   parseLoad,
   parseMeminfo,
@@ -48,9 +48,9 @@ const run = (readings: readonly Readings[]) => {
     return "timed";
   });
 
-  const result = Effect.runSync(admitted(read, measure));
+  const { host } = Effect.runSync(judged(read, measure));
 
-  return { measurements, reads, result };
+  return { host, measurements, reads };
 };
 
 describe("assess", () => {
@@ -116,46 +116,39 @@ describe("assess", () => {
   });
 });
 
-describe("admitted", () => {
-  test("a busy host refuses before timing: nothing is measured, and the message says inconclusive with the load", () => {
-    const { measurements, reads, result } = run([
+describe("judged", () => {
+  test("a busy host is judged inconclusive with the load in the message, and the measurement still ran", () => {
+    const { host, measurements, reads } = run([
       { ...quiet, load1: Option.some(19.4) },
     ]);
 
-    expect(measurements).toBe(0);
-    expect(reads).toBe(1);
-    expect(Result.isFailure(result)).toBe(true);
-    expect(Result.merge(result)).toMatch(
+    expect(measurements).toBe(1);
+    expect(reads).toBe(2);
+    expect(Result.isFailure(host)).toBe(true);
+    expect(Result.merge(host)).toMatch(
       /^inconclusive: host busy \(load 19\.4\)/u
     );
   });
 
-  test("a host that cannot be read refuses: nothing is measured", () => {
-    const { measurements, result } = run([{ ...quiet, cores: Option.none() }]);
+  test("a host that cannot be read is judged inconclusive", () => {
+    const { host } = run([{ ...quiet, cores: Option.none() }]);
 
-    expect(measurements).toBe(0);
-    expect(Result.merge(result)).toContain("core count unreadable");
+    expect(Result.merge(host)).toContain("core count unreadable");
   });
 
-  test("a quiet host is timed, and the value comes with both readings", () => {
-    const { measurements, reads, result } = run([quiet]);
+  test("a quiet host is trusted, with both readings", () => {
+    const { host, measurements, reads } = run([quiet]);
 
     expect(measurements).toBe(1);
     expect(reads).toBe(2);
-    expect(Result.isSuccess(result)).toBe(true);
+    expect(Result.isSuccess(host)).toBe(true);
   });
 
-  test("a host that became busy during the measurement makes it inconclusive, not a pass", () => {
-    const { measurements, result } = run([
-      quiet,
-      { ...quiet, load1: Option.some(21) },
-    ]);
+  test("a host that became busy during the measurement is inconclusive, not a pass", () => {
+    const { host } = run([quiet, { ...quiet, load1: Option.some(21) }]);
 
-    expect(measurements).toBe(1);
-    expect(Result.isFailure(result)).toBe(true);
-    expect(Result.merge(result)).toContain(
-      "became busy during the measurement"
-    );
+    expect(Result.isFailure(host)).toBe(true);
+    expect(Result.merge(host)).toContain("became busy during the measurement");
   });
 });
 

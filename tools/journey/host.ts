@@ -243,33 +243,35 @@ export const readHost = (sampleSeconds: number) =>
 // THE GATE
 
 /**
- * Runs `measure` only on a quiet host, and only trusts it if the host was still quiet afterwards: the host is read
- * before and after. `Result.fail` is the inconclusive message (nothing, or nothing trustworthy, was measured);
- * `Result.succeed` carries the measurement and what was read.
+ * Runs `measure` and judges whether its TIMES can be trusted: the host is read before and after, and a measurement is
+ * trustworthy only if the host was quiet at both ends. `measure` always runs, because some of what it observes does
+ * not depend on load (which nodes the DOM touched); a caller uses `value` for those and `host` for anything timed.
+ * `host` is `Result.fail` with the inconclusive message, or `Result.succeed` with what was read.
  */
-export const admitted = <A, E, R, E2, R2>(
+export const judged = <A, E, R, E2, R2>(
   read: Effect.Effect<Readings, E, R>,
   measure: Effect.Effect<A, E2, R2>
 ) =>
   Effect.gen(function* gate() {
     const before = yield* read;
+    const value = yield* measure;
+    const after = yield* read;
 
-    return yield* Result.match(assess(before), {
-      onFailure: (reasons) =>
-        Effect.succeed(Result.fail(inconclusive(before, reasons))),
+    const host: Result.Result<
+      { readonly after: string; readonly before: string },
+      string
+    > = Result.match(assess(before), {
+      onFailure: (reasons) => Result.fail(inconclusive(before, reasons)),
       onSuccess: (readBefore) =>
-        Effect.gen(function* measured() {
-          const value = yield* measure;
-          const after = yield* read;
-
-          return Result.match(assess(after), {
-            onFailure: (reasons) =>
-              Result.fail(
-                `${inconclusive(after, reasons)} (it became busy during the measurement)`
-              ),
-            onSuccess: (readAfter) =>
-              Result.succeed({ after: readAfter, before: readBefore, value }),
-          });
+        Result.match(assess(after), {
+          onFailure: (reasons) =>
+            Result.fail(
+              `${inconclusive(after, reasons)} (it became busy during the measurement)`
+            ),
+          onSuccess: (readAfter) =>
+            Result.succeed({ after: readAfter, before: readBefore }),
         }),
     });
+
+    return { host, value };
   });

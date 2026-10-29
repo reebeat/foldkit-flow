@@ -33,7 +33,9 @@ import type {
   Page,
 } from "puppeteer-core";
 
-import { admitted, readHost } from "./host.ts";
+import { check, outcome, performanceChecks } from "./checks.ts";
+import type { Check } from "./checks.ts";
+import { judged, readHost } from "./host.ts";
 import * as probe from "./probe.ts";
 import type { Point } from "./probe.ts";
 import { shareAtMost, summarise } from "./stats.ts";
@@ -67,30 +69,6 @@ const inconclusiveExitCode = 75;
 
 /** The seconds over which the host's swap-in rate is sampled, before and after the J9 measurement. */
 const hostSampleSeconds = 3;
-
-type Status = "fail" | "inconclusive" | "pass";
-
-interface Check {
-  readonly detail: string;
-  readonly id: string;
-  readonly name: string;
-  readonly status: Status;
-}
-
-const check = (
-  id: string,
-  name: string,
-  ok: boolean,
-  detail: string
-): Check => ({ detail, id, name, status: ok ? "pass" : "fail" });
-
-/** A check that could not run: neither passed nor failed. */
-const unrun = (id: string, name: string, detail: string): Check => ({
-  detail,
-  id,
-  name,
-  status: "inconclusive",
-});
 
 const attempt = <A>(label: string, thunk: () => Promise<A>) =>
   Effect.tryPromise({
@@ -808,63 +786,54 @@ const measurePerformance = (session: Session, cdp: CDPSession) =>
       ...Arr.map(drags, (measured) => measured.travelled)
     );
 
-    const checks = [
-      check(
-        "J9",
-        `dragging one node of ${nodes} nodes and ${edges} edges: median of ${runCount} runs of the p95 scripting time (update, view, patch) per pointer move under ${scriptBudgetMs} ms, and 95% of frames within ${frameToleranceMs} ms`,
-        nodes === 500 &&
-          edges === 700 &&
-          gate < scriptBudgetMs &&
-          smooth >= 0.95 &&
-          travelled > 100,
-        `p95 scripting per run: ${Arr.join(Arr.map(scriptP95s, ms), ", ")} ms, median ${ms(gate)}; all ${moves.script.count} moves (ms, p50/p95/max): scripting ${ms(moves.script.p50)}/${ms(moves.script.p95)}/${ms(moves.script.max)}, style ${ms(moves.style.p50)}/${ms(moves.style.p95)}/${ms(moves.style.max)}, layout ${ms(moves.layout.p50)}/${ms(moves.layout.p95)}/${ms(moves.layout.max)}, all main-thread tasks ${ms(moves.task.p50)}/${ms(moves.task.p95)}/${ms(moves.task.max)}; the same two frames idle: tasks p50 ${ms(idle.task.p50)} ms; frame interval p50 ${frames.p50.toFixed(1)} ms, p95 ${frames.p95.toFixed(1)} ms, max ${frames.max.toFixed(1)} ms (${frames.count} frames), ${(smooth * 100).toFixed(1)}% within ${frameToleranceMs} ms; the node travelled at least ${travelled} px on screen`
-      ),
-      check(
-        "J9",
-        "memoisation holds: a drag touches the dragged node (and the node that was selected before it) and its own edges only, a zoom touches nothing",
-        touchedNodes <= 2 && touchedEdges <= 12 && zoomTouched.total === 0,
-        `drag: ${touchedNodes} nodes and ${touchedEdges} edges mutated of ${nodes} and ${edges}; ten wheel steps: ${zoomTouched.total} mutations`
-      ),
-    ];
+    const timing = check(
+      "J9",
+      `dragging one node of ${nodes} nodes and ${edges} edges: median of ${runCount} runs of the p95 scripting time (update, view, patch) per pointer move under ${scriptBudgetMs} ms, and 95% of frames within ${frameToleranceMs} ms`,
+      nodes === 500 &&
+        edges === 700 &&
+        gate < scriptBudgetMs &&
+        smooth >= 0.95 &&
+        travelled > 100,
+      `p95 scripting per run: ${Arr.join(Arr.map(scriptP95s, ms), ", ")} ms, median ${ms(gate)}; all ${moves.script.count} moves (ms, p50/p95/max): scripting ${ms(moves.script.p50)}/${ms(moves.script.p95)}/${ms(moves.script.max)}, style ${ms(moves.style.p50)}/${ms(moves.style.p95)}/${ms(moves.style.max)}, layout ${ms(moves.layout.p50)}/${ms(moves.layout.p95)}/${ms(moves.layout.max)}, all main-thread tasks ${ms(moves.task.p50)}/${ms(moves.task.p95)}/${ms(moves.task.max)}; the same two frames idle: tasks p50 ${ms(idle.task.p50)} ms; frame interval p50 ${frames.p50.toFixed(1)} ms, p95 ${frames.p95.toFixed(1)} ms, max ${frames.max.toFixed(1)} ms (${frames.count} frames), ${(smooth * 100).toFixed(1)}% within ${frameToleranceMs} ms; the node travelled at least ${travelled} px on screen`
+    );
+
+    const memoisation = check(
+      "J9",
+      "memoisation holds: a drag touches the dragged node (and the node that was selected before it) and its own edges only, a zoom touches nothing",
+      touchedNodes <= 2 && touchedEdges <= 12 && zoomTouched.total === 0,
+      `drag: ${touchedNodes} nodes and ${touchedEdges} edges mutated of ${nodes} and ${edges}; ten wheel steps: ${zoomTouched.total} mutations`
+    );
 
     return {
-      checks,
+      memoisation,
       summaries: { frames, idle, moves, runs: scriptP95s, smooth },
+      timing,
     };
   });
 
 /**
- * J9 on a quiet host only (`host.ts`): the host is read before and after the measurement, and a busy or unreadable host
- * makes both J9 checks inconclusive instead of pass or fail.
+ * J9. The drags always run, and the memoisation check (which nodes the DOM touched) is judged on every host: it counts
+ * mutations, not milliseconds. Only the timing check needs a quiet host (`host.ts`): on a busy or unreadable one it is
+ * inconclusive instead of pass or fail.
  */
 const performanceJourney = (session: Session, cdp: CDPSession) =>
-  Effect.gen(function* admittedPerformance() {
-    const outcome = yield* admitted(
+  Effect.gen(function* judgedPerformance() {
+    const { host, value } = yield* judged(
       readHost(hostSampleSeconds),
       measurePerformance(session, cdp)
     );
 
-    return Result.match(outcome, {
-      onFailure: (message) => ({
-        checks: [
-          unrun(
-            "J9",
-            "dragging one node of 500 nodes and 700 edges: the frame budget",
-            message
-          ),
-          unrun(
-            "J9",
-            "memoisation holds: a drag touches the dragged node and its own edges only, a zoom touches nothing",
-            message
-          ),
-        ],
-        summaries: { inconclusive: message },
+    return {
+      checks: performanceChecks(host, value),
+      summaries: Result.match(host, {
+        onFailure: (message) => ({ ...value.summaries, inconclusive: message }),
+        onSuccess: ({ after, before }) => ({
+          ...value.summaries,
+          hostAfter: after,
+          hostBefore: before,
+        }),
       }),
-      onSuccess: ({ after, before, value }) => ({
-        checks: value.checks,
-        summaries: { ...value.summaries, hostAfter: after, hostBefore: before },
-      }),
-    });
+    };
   });
 
 // MAIN
@@ -1058,15 +1027,14 @@ const main = Effect.gen(function* journey() {
     `browser ${version}; load before ${Str.trim(loadBefore)}; after ${Str.trim(loadAfter)}`
   );
 
-  const failed = Arr.filter(checks, (entry) => entry.status === "fail");
+  const verdict = outcome(checks);
 
-  const unproven = Arr.filter(
-    checks,
-    (entry) => entry.status === "inconclusive"
-  );
+  const detailsOf = (status: Check["status"]) =>
+    Arr.filter(checks, (entry) => entry.status === status);
 
-  // a failure is a failure even when another check could not run; only a journey with no failure can be inconclusive
-  if (Arr.isReadonlyArrayNonEmpty(failed)) {
+  if (verdict === "failed") {
+    const failed = detailsOf("fail");
+
     return yield* new JourneyError({
       message: `${failed.length} checks failed: ${Arr.join(
         Arr.map(failed, (entry) => entry.id),
@@ -1075,7 +1043,9 @@ const main = Effect.gen(function* journey() {
     });
   }
 
-  if (Arr.isReadonlyArrayNonEmpty(unproven)) {
+  if (verdict === "inconclusive") {
+    const unproven = detailsOf("inconclusive");
+
     return yield* new JourneyError({
       exitCode: inconclusiveExitCode,
       message: `${unproven.length} checks could not run and are NOT passed (exit ${inconclusiveExitCode}): ${Arr.join(

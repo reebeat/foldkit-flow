@@ -62,8 +62,9 @@
     "@effect/vitest": "4.1.0",
     "@effect/tsgo": "0.63.0",
     "oxc-parser": "0.153.0",
-    "foldkit": "0.169.0",
-    "@foldkit/oxlint-plugin": "0.15.3",
+    "foldkit": "0.170.0",
+    "@foldkit/vite-plugin": "0.29.0",
+    "@foldkit/oxlint-plugin": "0.15.4",
     "happy-dom": "^20.14.5",
     "tailwindcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3"
