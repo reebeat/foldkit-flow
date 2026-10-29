@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["tools/oxlint/anti-slop/**"],
+  "ignoreDependencies": ["@effect/language-service"],
+  "workspaces": {
+    "apps/example": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["tailwindcss"]
+    },
+    "packages/flow": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "tools/quality": {
+      "entry": ["checkEffectExceptions.ts"],
+      "project": ["*.ts", "test/**/*.ts"]
+    }
+  },
+  "ignoreBinaries": ["gitleaks"]
+}
