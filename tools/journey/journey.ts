@@ -7,13 +7,18 @@
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import {
   Array as Arr,
+  Cause,
   Config,
   DateTime,
   Effect,
+  Exit,
   FileSystem,
+  Match,
   Option,
   Order,
   Path,
+  Result,
+  Runtime,
   Schedule,
   Schema,
   String as Str,
@@ -28,6 +33,7 @@ import type {
   Page,
 } from "puppeteer-core";
 
+import { admitted, readHost } from "./host.ts";
 import * as probe from "./probe.ts";
 import type { Point } from "./probe.ts";
 import { shareAtMost, summarise } from "./stats.ts";
@@ -51,14 +57,24 @@ class JourneyError extends Schema.TaggedError<
   JourneyError,
   { readonly brand: unique symbol }
 >()("JourneyError", {
+  /** Set for an outcome that has its own exit code: 75 when nothing failed but J9 could not be timed. */
+  exitCode: Schema.optional(Schema.Finite),
   message: Schema.String,
 }) {}
+
+/** Exit code of a journey that failed nothing but could not time J9 on a busy host: not a pass, not a failure. */
+const inconclusiveExitCode = 75;
+
+/** The seconds over which the host's swap-in rate is sampled, before and after the J9 measurement. */
+const hostSampleSeconds = 3;
+
+type Status = "fail" | "inconclusive" | "pass";
 
 interface Check {
   readonly detail: string;
   readonly id: string;
   readonly name: string;
-  readonly ok: boolean;
+  readonly status: Status;
 }
 
 const check = (
@@ -66,7 +82,15 @@ const check = (
   name: string,
   ok: boolean,
   detail: string
-): Check => ({ detail, id, name, ok });
+): Check => ({ detail, id, name, status: ok ? "pass" : "fail" });
+
+/** A check that could not run: neither passed nor failed. */
+const unrun = (id: string, name: string, detail: string): Check => ({
+  detail,
+  id,
+  name,
+  status: "inconclusive",
+});
 
 const attempt = <A>(label: string, thunk: () => Promise<A>) =>
   Effect.tryPromise({
@@ -741,7 +765,7 @@ const columns = (list: readonly Busy[]) => ({
 
 const ms = (value: number) => value.toFixed(2);
 
-const performanceJourney = (session: Session, cdp: CDPSession) =>
+const measurePerformance = (session: Session, cdp: CDPSession) =>
   Effect.gen(function* performanceStep() {
     yield* prepareLarge(session);
 
@@ -809,6 +833,40 @@ const performanceJourney = (session: Session, cdp: CDPSession) =>
     };
   });
 
+/**
+ * J9 on a quiet host only (`host.ts`): the host is read before and after the measurement, and a busy or unreadable host
+ * makes both J9 checks inconclusive instead of pass or fail.
+ */
+const performanceJourney = (session: Session, cdp: CDPSession) =>
+  Effect.gen(function* admittedPerformance() {
+    const outcome = yield* admitted(
+      readHost(hostSampleSeconds),
+      measurePerformance(session, cdp)
+    );
+
+    return Result.match(outcome, {
+      onFailure: (message) => ({
+        checks: [
+          unrun(
+            "J9",
+            "dragging one node of 500 nodes and 700 edges: the frame budget",
+            message
+          ),
+          unrun(
+            "J9",
+            "memoisation holds: a drag touches the dragged node and its own edges only, a zoom touches nothing",
+            message
+          ),
+        ],
+        summaries: { inconclusive: message },
+      }),
+      onSuccess: ({ after, before, value }) => ({
+        checks: value.checks,
+        summaries: { ...value.summaries, hostAfter: after, hostBefore: before },
+      }),
+    });
+  });
+
 // MAIN
 
 const chromiumBrowser = (executablePath: string) =>
@@ -824,12 +882,20 @@ const chromiumBrowser = (executablePath: string) =>
       attempt("close Chromium", () => browser.close()).pipe(Effect.orDie)
   );
 
+const label = (status: Check["status"]) =>
+  Match.value(status).pipe(
+    Match.when("pass", () => "PASS"),
+    Match.when("fail", () => "FAIL"),
+    Match.when("inconclusive", () => "INCONCLUSIVE"),
+    Match.exhaustive
+  );
+
 const report = (checks: readonly Check[]) =>
   Effect.forEach(
     checks,
     (entry) =>
       Effect.log(
-        `${entry.ok ? "PASS" : "FAIL"} ${entry.id} ${entry.name}\n     ${entry.detail}`
+        `${label(entry.status)} ${entry.id} ${entry.name}\n     ${entry.detail}`
       ),
     { discard: true }
   );
@@ -992,8 +1058,14 @@ const main = Effect.gen(function* journey() {
     `browser ${version}; load before ${Str.trim(loadBefore)}; after ${Str.trim(loadAfter)}`
   );
 
-  const failed = Arr.filter(checks, (entry) => !entry.ok);
+  const failed = Arr.filter(checks, (entry) => entry.status === "fail");
 
+  const unproven = Arr.filter(
+    checks,
+    (entry) => entry.status === "inconclusive"
+  );
+
+  // a failure is a failure even when another check could not run; only a journey with no failure can be inconclusive
   if (Arr.isReadonlyArrayNonEmpty(failed)) {
     return yield* new JourneyError({
       message: `${failed.length} checks failed: ${Arr.join(
@@ -1003,9 +1075,40 @@ const main = Effect.gen(function* journey() {
     });
   }
 
+  if (Arr.isReadonlyArrayNonEmpty(unproven)) {
+    return yield* new JourneyError({
+      exitCode: inconclusiveExitCode,
+      message: `${unproven.length} checks could not run and are NOT passed (exit ${inconclusiveExitCode}): ${Arr.join(
+        Arr.map(unproven, (entry) => entry.detail),
+        " | "
+      )}`,
+    });
+  }
+
   return yield* Effect.log("The journey held.");
 });
 
+const isJourneyError = Schema.is(JourneyError);
+
+/** A journey error exits with its own code (75 for inconclusive), else the runtime's default. */
+const teardown: Runtime.Teardown = (exit, onExit) => {
+  const code = Exit.isFailure(exit)
+    ? Option.flatMap(Cause.findErrorOption(exit.cause), (failure) =>
+        isJourneyError(failure)
+          ? Option.fromNullishOr(failure.exitCode)
+          : Option.none()
+      )
+    : Option.none();
+
+  Option.match(code, {
+    onNone: () => {
+      Runtime.defaultTeardown(exit, onExit);
+    },
+    onSome: onExit,
+  });
+};
+
 NodeRuntime.runMain(
-  main.pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+  main.pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  { teardown }
 );
