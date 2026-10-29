@@ -170,6 +170,8 @@ const nodeView = (
           ? Option.some(
               Message.PressedNodeKey({
                 id: node.id,
+                isAdditive:
+                  modifiers.shiftKey || modifiers.ctrlKey || modifiers.metaKey,
                 isShift: modifiers.shiftKey,
                 key,
               })

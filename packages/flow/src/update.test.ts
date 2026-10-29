@@ -1,4 +1,4 @@
-import { Option } from "effect";
+import { Array, Option } from "effect";
 import {
   Command,
   expectNoOutMessage,
@@ -20,6 +20,7 @@ import {
   compound,
   edgeNamed,
   idsOf,
+  nested,
   nodeAt,
   nodeNamed,
 } from "./testFlows.ts";
@@ -57,8 +58,12 @@ const validityOf = (flow: Model) =>
     () => "none"
   );
 
-const key = (id: string, pressed: string, isShift = false) =>
-  Message.PressedNodeKey({ id, isShift, key: pressed });
+const key = (
+  id: string,
+  pressed: string,
+  isShift = false,
+  isAdditive = false
+) => Message.PressedNodeKey({ id, isAdditive, isShift, key: pressed });
 
 const pressNode = (id: string, isAdditive = false) =>
   message(Message.PressedNode({ id, isAdditive }));
@@ -161,11 +166,11 @@ describe("viewport", () => {
     story(
       update,
       given(abc()),
-      message(Message.ChangedPanning({ isPanning: true })),
+      message(Message.UpdatedPanning({ isPanning: true })),
       model((next) => {
         expect(next.interaction).toStrictEqual(Interaction.Panning());
       }),
-      message(Message.ChangedPanning({ isPanning: false })),
+      message(Message.UpdatedPanning({ isPanning: false })),
       model((next) => {
         expect(next.interaction).toStrictEqual(Interaction.Idle());
       })
@@ -179,7 +184,7 @@ describe("viewport", () => {
     story(
       update,
       given(dragging),
-      message(Message.ChangedPanning({ isPanning: true })),
+      message(Message.UpdatedPanning({ isPanning: true })),
       model((next) => {
         expect(next.interaction).toStrictEqual(
           Interaction.Dragging({ ids: ["a"] })
@@ -196,11 +201,11 @@ describe("selection", () => {
       given(abc()),
       pressNode("a"),
       expectOutMessage(
-        OutMessage.ChangedSelection({ edgeIds: [], nodeIds: ["a"] })
+        OutMessage.UpdatedSelection({ edgeIds: [], nodeIds: ["a"] })
       ),
       pressNode("b"),
       expectOutMessage(
-        OutMessage.ChangedSelection({ edgeIds: [], nodeIds: ["b"] })
+        OutMessage.UpdatedSelection({ edgeIds: [], nodeIds: ["b"] })
       ),
       model((next) => {
         expect(selectedNodeIds(next.nodes)).toStrictEqual(["b"]);
@@ -261,7 +266,7 @@ describe("selection", () => {
       pressNode("a"),
       message(Message.PressedPane()),
       expectOutMessage(
-        OutMessage.ChangedSelection({ edgeIds: [], nodeIds: [] })
+        OutMessage.UpdatedSelection({ edgeIds: [], nodeIds: [] })
       ),
       model((next) => {
         expect(selectedNodeIds(next.nodes)).toStrictEqual([]);
@@ -305,7 +310,7 @@ describe("box select", () => {
       }),
       message(Message.EndedBoxSelect()),
       expectOutMessage(
-        OutMessage.ChangedSelection({ edgeIds: [], nodeIds: ["a", "b"] })
+        OutMessage.UpdatedSelection({ edgeIds: [], nodeIds: ["a", "b"] })
       ),
       model((next) => {
         expect(next.interaction).toStrictEqual(Interaction.Idle());
@@ -575,7 +580,7 @@ describe("keyboard", () => {
       model((next) => {
         expect(selectedNodeIds(next.nodes)).toStrictEqual(["a"]);
       }),
-      message(key("b", " ", true)),
+      message(key("b", " ", true, true)),
       model((next) => {
         expect(selectedNodeIds(next.nodes)).toStrictEqual(["a", "b"]);
       }),
@@ -615,13 +620,57 @@ describe("keyboard", () => {
     );
   });
 
-  test("deleting a parent removes its children", () => {
+  test("deleting a parent removes its descendants at every depth, and every edge that ends on any of them", () => {
     story(
       update,
-      given(compound()),
+      given(nested()),
       message(key("scene", "Delete")),
+      expectOutMessage(
+        OutMessage.Deleted({
+          edgeIds: ["child-to-outside", "deep-to-outside"],
+          nodeIds: ["scene", "child-a", "deep"],
+        })
+      ),
       model((next) => {
-        expect(idsOf(next.nodes)).toStrictEqual(["outside"]);
+        expect(idsOf(next.nodes)).toStrictEqual(["outside", "sibling"]);
+        expect(idsOf(next.edges)).toStrictEqual(["outside-to-sibling"]);
+        expect(next.announcement).toBe("Deleted 3 nodes and 2 edges");
+        // no node is left pointing at a parent that is gone
+        expect(
+          Array.every(next.nodes, (node) => node.parentId === undefined)
+        ).toBe(true);
+      })
+    );
+  });
+
+  test("deleting a middle node removes its sub-node and leaves the scene", () => {
+    story(
+      update,
+      given(nested()),
+      message(key("child-a", "Delete")),
+      model((next) => {
+        expect(idsOf(next.nodes)).toStrictEqual([
+          "scene",
+          "outside",
+          "sibling",
+        ]);
+        expect(idsOf(next.edges)).toStrictEqual(["outside-to-sibling"]);
+      })
+    );
+  });
+
+  test("Ctrl or Meta with Enter adds to the selection, and does not change the step", () => {
+    story(
+      update,
+      given(abc()),
+      message(key("a", "Enter")),
+      message(key("c", "Enter", false, true)),
+      model((next) => {
+        expect(selectedNodeIds(next.nodes)).toStrictEqual(["a", "c"]);
+      }),
+      message(key("c", "ArrowRight", false, true)),
+      model((next) => {
+        expect(position(next, "c")).toStrictEqual({ x: 10, y: 200 });
       })
     );
   });

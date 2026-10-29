@@ -118,28 +118,30 @@ const toXyConnection = (connection: XyConnection): Connection => ({
 });
 
 // Starting the move is synchronous: d3 applies the transform at once and `setViewport`'s promise settles after, so the
-// promise is not awaited (`void`).
-const panEffect = (pane: Element, delta: XYPosition) =>
+// promise is not awaited (`void`). Whether the pane has a controller (it has none before its Mount ran) is the result.
+const panNow = (pane: Element, delta: XYPosition): boolean =>
   Option.match(Option.fromNullishOr(panZooms.get(pane)), {
-    onNone: () => Effect.succeed(false),
+    onNone: () => false,
     onSome: (controller) => {
       const viewport = viewportOf(pane);
 
-      return Effect.sync(() => {
-        void controller.setViewport({
-          x: viewport.x + delta.x,
-          y: viewport.y + delta.y,
-          zoom: viewport.zoom,
-        });
-
-        return true;
+      void controller.setViewport({
+        x: viewport.x + delta.x,
+        y: viewport.y + delta.y,
+        zoom: viewport.zoom,
       });
+
+      return true;
     },
   });
 
-// XYDrag and XYHandle ask for a function returning a Promise (`PanBy`); the Effect is run here, at the foreign callback.
+// XYDrag and XYHandle ask for a function returning a Promise (`PanBy`): the plain result is wrapped, nothing runs
+// outside the Mount.
+const resolved: (value: boolean) => Promise<boolean> =
+  Promise.resolve.bind(Promise);
+
 const panByOf = (pane: Element) =>
-  compose((delta: XYPosition) => panEffect(pane, delta), Effect.runPromise);
+  compose((delta: XYPosition) => panNow(pane, delta), resolved);
 
 // PANE: pan, zoom (XYPanZoom), the size of the pane, box select and a press on the empty pane.
 
@@ -147,7 +149,7 @@ type PaneMessage = Extract<
   Message,
   {
     readonly _tag:
-      | "ChangedPanning"
+      | "UpdatedPanning"
       | "EndedBoxSelect"
       | "MovedBoxSelect"
       | "PanZoomed"
@@ -170,7 +172,7 @@ const startPanZoom = (element: Element, send: Send<PaneMessage>) => {
       onSome: (f) => f.minZoom,
     }),
     onDraggingChange: (isPanning) => {
-      send(Message.ChangedPanning({ isPanning }));
+      send(Message.UpdatedPanning({ isPanning }));
     },
     translateExtent: unbounded,
     viewport: initial,
@@ -340,7 +342,7 @@ export const FlowPane = Mount.defineStream("FlowPane", {
       })
     ),
   messages: [
-    Message.ChangedPanning,
+    Message.UpdatedPanning,
     Message.EndedBoxSelect,
     Message.MovedBoxSelect,
     Message.PanZoomed,
@@ -491,6 +493,33 @@ export const FlowNodeMount = Mount.defineStream("FlowNode", {
           { capture: true }
         );
 
+        // A key press that deletes the focused node removes the element that has focus: the canvas takes it, so a
+        // keyboard user stays inside the flow. The pane is read now, while the node is still in it.
+        const pane = paneOf(element);
+        let isDeletedByKey = false;
+
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            if (isDeletedByKey && pane instanceof HTMLElement) {
+              pane.focus();
+            }
+          })
+        );
+
+        // The flag follows the last key pressed on the node, so a Delete that removed other nodes (the selection)
+        // does not take focus later.
+        yield* listen(
+          element,
+          "keydown",
+          (event) => {
+            if (event instanceof KeyboardEvent && event.target === element) {
+              isDeletedByKey =
+                event.key === "Delete" || event.key === "Backspace";
+            }
+          },
+          {}
+        );
+
         return yield* Effect.never;
       })
     ),
@@ -520,7 +549,21 @@ type HandleParams = Parameters<typeof XYHandle.onPointerDown>[1];
 
 interface ActiveConnection {
   fromHandle: Handle | null;
+  /** True from the press that starts a gesture until the release that ends it. */
+  isPressed: boolean;
 }
+
+const trackPress = (document: Document, active: ActiveConnection) => {
+  const release = () => {
+    active.isPressed = false;
+    document.removeEventListener("mouseup", release);
+    document.removeEventListener("touchend", release);
+  };
+
+  active.isPressed = true;
+  document.addEventListener("mouseup", release);
+  document.addEventListener("touchend", release);
+};
 
 interface ConnectFrom {
   readonly edgeId: string | undefined;
@@ -609,6 +652,8 @@ const beginConnection = (
     },
   };
 
+  trackPress(element.ownerDocument, active);
+
   XYHandle.onPointerDown(
     event,
     from.edgeId === undefined
@@ -617,11 +662,12 @@ const beginConnection = (
   );
 };
 
-// A connection gesture ends on the mouseup that XYHandle listens for on the document. If the Mount is released first,
-// that mouseup is sent here so the controller removes its document listeners and the Model leaves `Connecting`.
+// A connection gesture ends on the mouseup (or touchend) that XYHandle listens for on the document, and XYHandle adds
+// those listeners at the press, before the pointer has moved. If the Mount is released while the button is still down,
+// a mouseup is sent here so the controller removes its document listeners and the Model leaves `Connecting`.
 const endGesture = (element: Element, active: ActiveConnection) =>
   Effect.sync(() => {
-    if (active.fromHandle !== null) {
+    if (active.isPressed) {
       element.ownerDocument.dispatchEvent(new MouseEvent("mouseup"));
     }
   });
@@ -633,7 +679,7 @@ const connectStream = (
   Stream.callback<ConnectMessage>((queue) =>
     Effect.gen(function* connect() {
       const send = sendTo(queue);
-      const active: ActiveConnection = { fromHandle: null };
+      const active: ActiveConnection = { fromHandle: null, isPressed: false };
 
       yield* Effect.addFinalizer(() => endGesture(element, active));
 

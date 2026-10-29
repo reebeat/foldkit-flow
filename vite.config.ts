@@ -135,10 +135,15 @@ export default defineConfig({
       },
       {
         // The browser gate adapts Puppeteer, a Promise API, through `attempt` (Effect.tryPromise) and probe.ts runs
-        // inside the page. Ultracite's promise-function-async asks for `async` on every Promise-returning arrow, and the
-        // Effect diagnostics then reject that `async` (and eslint's require-await rejects an async arrow without await),
-        // so the two preset rules contradict each other here. A Promise-returning arrow is the Effect.tryPromise form.
-        files: ["tools/journey/journey.ts", "tools/journey/probe.ts"],
+        // inside the page; controllers.test.ts hands `vi.mock` a factory that returns the original module's Promise.
+        // Ultracite's promise-function-async asks for `async` on every Promise-returning arrow, and the Effect
+        // diagnostics then reject that `async` (and eslint's require-await rejects an async arrow without await), so
+        // the two preset rules contradict each other here. A Promise-returning arrow is the Effect.tryPromise form.
+        files: [
+          "tools/journey/journey.ts",
+          "tools/journey/probe.ts",
+          "packages/flow/src/controllers.test.ts",
+        ],
         rules: { "typescript/promise-function-async": "off" },
       },
       {

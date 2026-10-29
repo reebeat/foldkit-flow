@@ -28,7 +28,6 @@ const DraftFields = {
  * handle Messages; the view produces the key and button Messages.
  */
 export const Message = defineMessageUnion({
-  ChangedPanning: { isPanning: Schema.Boolean },
   ClickedFitView: {},
   ClickedZoomIn: {},
   ClickedZoomOut: {},
@@ -44,6 +43,7 @@ export const Message = defineMessageUnion({
   PressedNode: { id: Schema.NonEmptyString, isAdditive: Schema.Boolean },
   PressedNodeKey: {
     id: Schema.NonEmptyString,
+    isAdditive: Schema.Boolean,
     isShift: Schema.Boolean,
     key: Schema.String,
   },
@@ -57,6 +57,7 @@ export const Message = defineMessageUnion({
   StartedNodeDrag: { id: Schema.NonEmptyString },
   StoppedNodeDrag: {},
   UpdatedConnection: DraftFields,
+  UpdatedPanning: { isPanning: Schema.Boolean },
 });
 
 export type Message = typeof Message.Type;
@@ -68,10 +69,6 @@ export type Message = typeof Message.Type;
  * it with `addEdge`).
  */
 export const OutMessage = defineMessageUnion({
-  ChangedSelection: {
-    edgeIds: Schema.Array(Schema.NonEmptyString),
-    nodeIds: Schema.Array(Schema.NonEmptyString),
-  },
   Connected: { connection: Connection },
   Deleted: {
     edgeIds: Schema.Array(Schema.NonEmptyString),
@@ -79,6 +76,10 @@ export const OutMessage = defineMessageUnion({
   },
   Moved: { nodeIds: Schema.Array(Schema.NonEmptyString) },
   Reconnected: { connection: Connection, edgeId: Schema.NonEmptyString },
+  UpdatedSelection: {
+    edgeIds: Schema.Array(Schema.NonEmptyString),
+    nodeIds: Schema.Array(Schema.NonEmptyString),
+  },
 });
 
 export type OutMessage = typeof OutMessage.Type;

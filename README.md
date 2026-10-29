@@ -49,7 +49,7 @@ const model = {
 };
 
 // 3. Embed it and fold its Messages and out-messages (Update.foldChild).
-//    OutMessage: ChangedSelection | Connected | Reconnected | Deleted | Moved.
+//    OutMessage: UpdatedSelection | Connected | Reconnected | Deleted | Moved.
 //    The Flow does not add an edge itself: on `Connected` the application calls Flow.addEdge(flow, connection, edge),
 //    on `Reconnected` Flow.reconnectEdge(flow, edgeId, connection). That is where an application decides.
 

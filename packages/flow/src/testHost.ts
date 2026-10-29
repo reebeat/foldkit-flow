@@ -37,9 +37,6 @@ const foldOutMessage = (
   outMessage: OutMessage
 ): Update.Step<HostModel, HostMessage> =>
   OutMessage.match<Update.Step<HostModel, HostMessage>>(outMessage, {
-    ChangedSelection: () => (model) => ({
-      model: withEvent(model, outMessage),
-    }),
     Connected:
       ({ connection }) =>
       (model) => ({
@@ -68,6 +65,9 @@ const foldOutMessage = (
           outMessage
         ),
       }),
+    UpdatedSelection: () => (model) => ({
+      model: withEvent(model, outMessage),
+    }),
   });
 
 const foldFlow = Update.foldChild({

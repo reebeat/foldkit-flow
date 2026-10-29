@@ -87,6 +87,30 @@ export const compound = (): Model =>
     ],
   });
 
+/** A scene holding a state that holds a sub-state, and a node outside, with edges from the nested nodes to it. */
+export const nested = (): Model =>
+  init({
+    edges: [
+      edgeBetween("child-to-outside", "child-a", "outside"),
+      edgeBetween("deep-to-outside", "deep", "outside"),
+      edgeBetween("outside-to-sibling", "outside", "sibling"),
+    ],
+    id: "test-flow",
+    isFitOnInit: false,
+    nodes: [
+      nodeAt("scene", 100, 100, { handles: [], height: 300, width: 400 }),
+      nodeAt("child-a", 20, 30, {
+        height: 200,
+        isClampedToParent: true,
+        parentId: "scene",
+        width: 300,
+      }),
+      nodeAt("deep", 10, 10, { isClampedToParent: true, parentId: "child-a" }),
+      nodeAt("outside", 600, 0),
+      nodeAt("sibling", 600, 200),
+    ],
+  });
+
 /** The node with this id; a test that names a node that is not there fails. */
 export const nodeNamed = (nodes: readonly FlowNode[], id: string): FlowNode =>
   Option.getOrThrow(Array.findFirst(nodes, (node) => node.id === id));

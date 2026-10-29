@@ -64,7 +64,7 @@ const select = (
 const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && Array.every(a, (id, index) => id === b[index]);
 
-// A selection that changed tells the application (`ChangedSelection`) and the live region (`announcement`).
+// A selection that changed tells the application (`UpdatedSelection`) and the live region (`announcement`).
 const withSelectionChange = (
   before: Model,
   after: Model,
@@ -80,7 +80,7 @@ const withSelectionChange = (
   return isChanged
     ? {
         model: modifyFields(after, { announcement: () => announcement }),
-        outMessage: OutMessage.ChangedSelection({ edgeIds, nodeIds }),
+        outMessage: OutMessage.UpdatedSelection({ edgeIds, nodeIds }),
       }
     : { model: after };
 };
@@ -145,7 +145,7 @@ const endBox = (model: Model): Return => ({
       `${plural(selectedNodeIds(model.nodes).length, "node")} selected`,
     interaction: () => Interaction.Idle(),
   }),
-  outMessage: OutMessage.ChangedSelection({
+  outMessage: OutMessage.UpdatedSelection({
     edgeIds: selectedEdgeIds(model.edges),
     nodeIds: selectedNodeIds(model.nodes),
   }),
@@ -285,14 +285,36 @@ const dropped = (
 const hasEndIn = (edge: FlowEdge, ids: readonly string[]) =>
   Array.contains(ids, edge.source) || Array.contains(ids, edge.target);
 
-// Deletes the selected nodes and edges, or just the focused node when nothing is selected, and every edge that ends on
-// a deleted node (and the children of a deleted parent).
+// The ids and every node below them, at any depth: a parent takes its children (and theirs) with it.
+const withDescendants = (
+  nodes: readonly FlowNode[],
+  ids: readonly string[]
+): readonly string[] => {
+  const next = Array.filter(
+    nodes,
+    (node) =>
+      !Array.contains(ids, node.id) &&
+      node.parentId !== undefined &&
+      Array.contains(ids, node.parentId)
+  );
+
+  return next.length === 0
+    ? ids
+    : withDescendants(nodes, [...ids, ...Array.map(next, (node) => node.id)]);
+};
+
+// Deletes the selected nodes and edges, or just the focused node when nothing is selected, with every node below a
+// deleted parent and every edge that ends on a deleted node. `Deleted` and the announcement report the whole sets.
 const deleteSelection = (
   model: Model,
   focusedId: Option.Option<string>
 ): Return => {
   const selected = selectedNodeIds(model.nodes);
-  const nodeIds = selected.length === 0 ? Option.toArray(focusedId) : selected;
+
+  const nodeIds = withDescendants(
+    model.nodes,
+    selected.length === 0 ? Option.toArray(focusedId) : selected
+  );
 
   const edgeIds = Array.map(
     Array.filter(
@@ -314,12 +336,7 @@ const deleteSelection = (
       edges: (edges) =>
         Array.filter(edges, (edge) => !Array.contains(edgeIds, edge.id)),
       nodes: (nodes) =>
-        Array.filter(
-          nodes,
-          (node) =>
-            !Array.contains(nodeIds, node.id) &&
-            !Array.contains(nodeIds, node.parentId ?? "")
-        ),
+        Array.filter(nodes, (node) => !Array.contains(nodeIds, node.id)),
     }),
     outMessage: OutMessage.Deleted({ edgeIds, nodeIds }),
   };
@@ -405,7 +422,7 @@ const pressNodeKey = (
       Match.value(message.key).pipe(
         Match.withReturnType<Return>(),
         Match.whenOr("Enter", " ", () =>
-          pressNode(model, message.id, message.isShift)
+          pressNode(model, message.id, message.isAdditive)
         ),
         Match.whenOr("Delete", "Backspace", () =>
           deleteSelection(model, Option.some(message.id))
@@ -476,9 +493,6 @@ export const flowUpdate =
   (options: FlowOptions) =>
   (model: Model, message: Message): Return =>
     Message.match<Return>(message, {
-      ChangedPanning: ({ isPanning }) => ({
-        model: changePanning(model, isPanning),
-      }),
       ClickedFitView: () => ({ model: refit(model) }),
       ClickedZoomIn: () => ({ model: zoom(model, zoomStep) }),
       ClickedZoomOut: () => ({ model: zoom(model, 1 / zoomStep) }),
@@ -526,6 +540,9 @@ export const flowUpdate =
       StoppedNodeDrag: () => stopDrag(model),
       UpdatedConnection: (draftMessage) => ({
         model: updateConnection(model, options, draftMessage),
+      }),
+      UpdatedPanning: ({ isPanning }) => ({
+        model: changePanning(model, isPanning),
       }),
     });
 

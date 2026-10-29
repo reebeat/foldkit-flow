@@ -196,6 +196,67 @@ describe("the keyboard", () => {
         );
       })
   );
+
+  it.live(
+    "Ctrl with Enter adds to the selection, and Delete on the focused node gives focus to the canvas",
+    () =>
+      Effect.gen(function* additive() {
+        const { container, wrapper } = mountPoint();
+
+        Runtime.run(hostApplication(container, abc()));
+
+        yield* eventually(
+          () => nodeElement(wrapper, "a"),
+          (found) => found !== null
+        );
+
+        press(nodeElement(wrapper, "a"), "Enter");
+        nodeElement(wrapper, "b")?.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            bubbles: true,
+            ctrlKey: true,
+            key: "Enter",
+          })
+        );
+
+        const selected = yield* eventually(
+          () => wrapper.querySelectorAll("[data-selected='true']").length,
+          (count) => count === 2
+        );
+
+        assert.strictEqual(selected, 2);
+
+        // clear the selection, so that Delete acts on the focused node alone
+        press(nodeElement(wrapper, "a"), "Escape");
+
+        yield* eventually(
+          () => wrapper.querySelectorAll("[data-selected='true']").length,
+          (count) => count === 0
+        );
+
+        yield* Effect.sleep("100 millis");
+
+        const focused = nodeElement(wrapper, "c");
+
+        if (focused instanceof HTMLElement) {
+          focused.focus();
+        }
+
+        assert.strictEqual(document.activeElement, focused);
+
+        press(focused, "Delete");
+
+        yield* eventually(
+          () => nodeElement(wrapper, "c"),
+          (found) => found === null
+        );
+
+        assert.strictEqual(
+          document.activeElement,
+          wrapper.querySelector(".foldkit-flow__pane")
+        );
+      })
+  );
 });
 
 describe("the controls", () => {
@@ -339,6 +400,55 @@ describe("lifetimes", () => {
         for (const element of bound) {
           assert.strictEqual(d3Listeners(element ?? null), 0);
         }
+
+        vi.restoreAllMocks();
+      })
+  );
+
+  it.live(
+    "a connection pressed on a handle is ended when the app is disposed before the pointer moves: no document listener is left",
+    () =>
+      Effect.gen(function* pressed() {
+        const { container, wrapper } = mountPoint();
+        const onDocument = spyOnListeners(document);
+
+        yield* Effect.gen(function* running() {
+          yield* Effect.acquireRelease(
+            Effect.sync(() => Runtime.embed(hostApplication(container, abc()))),
+            (handle) =>
+              Effect.sync(() => {
+                handle.dispose();
+              })
+          );
+
+          yield* eventually(
+            () => wrapper.querySelectorAll(".foldkit-flow__handle").length,
+            (count) => count === 6
+          );
+
+          yield* Effect.sleep("150 millis");
+
+          wrapper.querySelector(".foldkit-flow__handle.source")?.dispatchEvent(
+            new MouseEvent("mousedown", {
+              bubbles: true,
+              button: 0,
+              clientX: 5,
+              clientY: 5,
+            })
+          );
+
+          // XYHandle listens for the release on the document from the press on, before any move
+          const held = Array.filter(
+            net(onDocument),
+            ([type]) => type === "mouseup"
+          );
+
+          assert.isAbove(held.length, 0);
+        }).pipe(Effect.scoped);
+
+        yield* Effect.sleep("150 millis");
+
+        assert.deepStrictEqual(net(onDocument), []);
 
         vi.restoreAllMocks();
       })

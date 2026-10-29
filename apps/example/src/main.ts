@@ -86,14 +86,6 @@ const foldOutMessage = (
   outMessage: Flow.OutMessage
 ): Update.Step<Model, Message> =>
   Flow.OutMessage.match<Update.Step<Model, Message>>(outMessage, {
-    ChangedSelection:
-      ({ edgeIds, nodeIds }) =>
-      (model) => ({
-        model: withLog(
-          model,
-          `Selection: ${nodeIds.length} nodes, ${edgeIds.length} edges`
-        ),
-      }),
     Connected:
       ({ connection }) =>
       (model) => ({
@@ -129,6 +121,14 @@ const foldOutMessage = (
         model: withLog(
           withFlow(model, Flow.reconnectEdge(model.flow, edgeId, connection)),
           `Reconnected ${edgeId}`
+        ),
+      }),
+    UpdatedSelection:
+      ({ edgeIds, nodeIds }) =>
+      (model) => ({
+        model: withLog(
+          model,
+          `Selection: ${nodeIds.length} nodes, ${edgeIds.length} edges`
         ),
       }),
   });
