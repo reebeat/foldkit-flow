@@ -6,13 +6,20 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./flow.css": "./src/flow.css"
   },
   "scripts": {
     "test": "vp test run"
   },
+  "dependencies": {
+    "@types/d3-selection": "3.0.11",
+    "@xyflow/system": "0.0.83",
+    "d3-selection": "3.0.0"
+  },
   "devDependencies": {
     "@effect/platform-browser": "catalog:",
+    "@effect/vitest": "catalog:",
     "effect": "catalog:",
     "foldkit": "catalog:",
     "happy-dom": "catalog:",

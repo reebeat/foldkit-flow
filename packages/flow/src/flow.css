@@ -1,0 +1,164 @@
+/* foldkit-flow: the visual defaults. Layout-critical styles are inline in the view; this file is look only. */
+
+.foldkit-flow {
+  --flow-accent: #2563eb;
+  --flow-edge: #94a3b8;
+  --flow-invalid: #dc2626;
+  --flow-valid: #16a34a;
+  background: #f8fafc;
+  font-family: system-ui, sans-serif;
+}
+
+.foldkit-flow__pane {
+  cursor: grab;
+  outline-offset: -2px;
+}
+
+.foldkit-flow__pane.panning {
+  cursor: grabbing;
+}
+
+.foldkit-flow__node {
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  box-sizing: border-box;
+  cursor: default;
+}
+
+.foldkit-flow__node:focus-visible {
+  outline: 3px solid var(--flow-accent);
+  outline-offset: 2px;
+}
+
+.foldkit-flow__node.selected {
+  border-color: var(--flow-accent);
+  box-shadow: 0 0 0 2px var(--flow-accent);
+}
+
+.foldkit-flow__handle {
+  background: #475569;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  box-sizing: border-box;
+  cursor: crosshair;
+}
+
+.foldkit-flow__handle:hover {
+  background: var(--flow-accent);
+}
+
+.foldkit-flow__edge-path {
+  stroke: var(--flow-edge);
+  stroke-width: 2;
+}
+
+.foldkit-flow__edge.selected .foldkit-flow__edge-path {
+  stroke: var(--flow-accent);
+}
+
+.foldkit-flow__edge-hit {
+  cursor: pointer;
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 16;
+}
+
+.foldkit-flow__edge-label {
+  fill: #334155;
+  font-size: 12px;
+}
+
+.foldkit-flow__arrow {
+  fill: var(--flow-edge);
+}
+
+.foldkit-flow__reconnect {
+  cursor: crosshair;
+  fill: #fff;
+  stroke: var(--flow-accent);
+  stroke-width: 2;
+}
+
+.foldkit-flow__draft-path {
+  stroke: var(--flow-edge);
+  stroke-dasharray: 5 4;
+  stroke-width: 2;
+}
+
+.foldkit-flow__draft-path.valid {
+  stroke: var(--flow-valid);
+}
+
+.foldkit-flow__draft-path.invalid {
+  stroke: var(--flow-invalid);
+}
+
+.foldkit-flow__box {
+  background: rgb(37 99 235 / 12%);
+  border: 1px dashed var(--flow-accent);
+}
+
+.foldkit-flow__controls {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  left: 12px;
+  overflow: hidden;
+  position: absolute;
+}
+
+.foldkit-flow__control {
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  font-size: 16px;
+  height: 28px;
+  width: 28px;
+}
+
+.foldkit-flow__control:hover {
+  background: #f1f5f9;
+}
+
+.foldkit-flow__control:focus-visible {
+  outline: 3px solid var(--flow-accent);
+  outline-offset: -3px;
+}
+
+.foldkit-flow__minimap {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  bottom: 12px;
+  position: absolute;
+  right: 12px;
+}
+
+.foldkit-flow__minimap-node {
+  fill: #cbd5e1;
+}
+
+.foldkit-flow__minimap-node.selected {
+  fill: var(--flow-accent);
+}
+
+.foldkit-flow__minimap-mask {
+  fill: rgb(15 23 42 / 12%);
+}
+
+.foldkit-flow__attribution {
+  bottom: 2px;
+  font-size: 10px;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.foldkit-flow__attribution a {
+  color: #64748b;
+  text-decoration: none;
+}
