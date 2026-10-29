@@ -1,12 +1,10 @@
 import { assert, it } from "@effect/vitest";
 import type * as Xyflow from "@xyflow/system";
 import { Array, Effect } from "effect";
-import { Runtime } from "foldkit";
 import { vi } from "vite-plus/test";
 
 import { abc } from "./testFlows.ts";
-import { hostApplication } from "./testHost.ts";
-import { eventually } from "./testing.ts";
+import { embedHost } from "./testHost.ts";
 
 // Observes the call itself: some of a controller's teardown (XYPanZoom's `destroy`) has no effect a DOM test can see once
 // the d3 bindings are removed by hand, so the controllers are wrapped and every one that was created must be destroyed.
@@ -47,28 +45,8 @@ it.live(
   "every xyflow controller a Mount created is destroyed when the app is disposed",
   () =>
     Effect.gen(function* destroyed() {
-      const wrapper = document.createElement("section");
-      const container = document.createElement("div");
-
-      container.id = "controllers-host";
-      wrapper.append(container);
-      document.body.append(wrapper);
-
       yield* Effect.gen(function* running() {
-        yield* Effect.acquireRelease(
-          Effect.sync(() => Runtime.embed(hostApplication(container, abc()))),
-          (handle) =>
-            Effect.sync(() => {
-              handle.dispose();
-            })
-        );
-
-        yield* eventually(
-          () => wrapper.querySelectorAll(".foldkit-flow__node").length,
-          (count) => count === 3
-        );
-
-        yield* Effect.sleep("150 millis");
+        yield* embedHost(abc());
 
         // the pane, the minimap and the three nodes each own one
         assert.strictEqual(created.get("XYPanZoom")?.length, 1);

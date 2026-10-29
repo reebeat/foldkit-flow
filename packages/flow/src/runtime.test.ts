@@ -12,27 +12,12 @@ import {
   FlowReconnect,
 } from "./mounts.ts";
 import { abc, compound } from "./testFlows.ts";
-import { hostApplication } from "./testHost.ts";
+import { embedHost, hostApplication, mountPoint, runHost } from "./testHost.ts";
 import { eventually } from "./testing.ts";
 
 // These tests boot a real Foldkit runtime in happy-dom with the Flow Submodel embedded, so the view, the Mounts and the
 // xyflow controllers run for real. happy-dom has no layout: pointer-geometry behaviour (box, drag, connect) is covered
 // by the browser journey (`bun run journey`).
-
-let mounts = 0;
-
-const mountPoint = () => {
-  mounts += 1;
-
-  const wrapper = document.createElement("section");
-  const container = document.createElement("div");
-
-  container.id = `flow-host-${mounts}`;
-  wrapper.append(container);
-  document.body.append(wrapper);
-
-  return { container, wrapper };
-};
 
 const nodeElement = (wrapper: Element, id: string) =>
   wrapper.querySelector(`.foldkit-flow__node[data-id='${id}']`);
@@ -122,14 +107,7 @@ describe("the keyboard", () => {
     "moves a focused node with the arrow keys, by four times as much with Shift, and says so",
     () =>
       Effect.gen(function* moves() {
-        const { container, wrapper } = mountPoint();
-
-        Runtime.run(hostApplication(container, abc()));
-
-        yield* eventually(
-          () => nodeElement(wrapper, "a"),
-          (found) => found !== null
-        );
+        const wrapper = yield* runHost(abc());
 
         press(nodeElement(wrapper, "a"), "ArrowRight");
 
@@ -156,14 +134,7 @@ describe("the keyboard", () => {
     "selects with Enter and deletes with Delete, removing the edges that ended on the node",
     () =>
       Effect.gen(function* deletes() {
-        const { container, wrapper } = mountPoint();
-
-        Runtime.run(hostApplication(container, abc()));
-
-        yield* eventually(
-          () => nodeElement(wrapper, "b"),
-          (found) => found !== null
-        );
+        const wrapper = yield* runHost(abc());
 
         press(nodeElement(wrapper, "b"), "Enter");
 
@@ -201,14 +172,7 @@ describe("the keyboard", () => {
     "Ctrl with Enter adds to the selection, and Delete on the focused node gives focus to the canvas",
     () =>
       Effect.gen(function* additive() {
-        const { container, wrapper } = mountPoint();
-
-        Runtime.run(hostApplication(container, abc()));
-
-        yield* eventually(
-          () => nodeElement(wrapper, "a"),
-          (found) => found !== null
-        );
+        const wrapper = yield* runHost(abc());
 
         press(nodeElement(wrapper, "a"), "Enter");
         nodeElement(wrapper, "b")?.dispatchEvent(
@@ -352,26 +316,11 @@ describe("lifetimes", () => {
     "disposing the runtime leaves no listener on the document or the window and no d3 binding on the elements",
     () =>
       Effect.gen(function* disposes() {
-        const { container, wrapper } = mountPoint();
         const onDocument = spyOnListeners(document);
         const onWindow = spyOnListeners(window);
 
-        const bound = yield* Effect.gen(function* running() {
-          yield* Effect.acquireRelease(
-            Effect.sync(() => Runtime.embed(hostApplication(container, abc()))),
-            (handle) =>
-              Effect.sync(() => {
-                handle.dispose();
-              })
-          );
-
-          yield* eventually(
-            () => wrapper.querySelectorAll(".foldkit-flow__node").length,
-            (count) => count === 3
-          );
-
-          // let the Mounts acquire their controllers
-          yield* Effect.sleep("150 millis");
+        const host = yield* Effect.gen(function* running() {
+          const wrapper = yield* embedHost(abc());
 
           const pane = wrapper.querySelector(".foldkit-flow__pane");
           const nodes = [...wrapper.querySelectorAll(".foldkit-flow__node")];
@@ -384,12 +333,12 @@ describe("lifetimes", () => {
           assert.isAbove(d3Listeners(minimap), 0);
           assert.isAbove(onDocument.add.mock.calls.length, 0);
 
-          return [pane, minimap, ...nodes];
+          return { bound: [pane, minimap, ...nodes], wrapper };
         }).pipe(Effect.scoped);
 
         yield* Effect.sleep("150 millis");
 
-        assert.isNull(wrapper.querySelector(".foldkit-flow__pane"));
+        assert.isNull(host.wrapper.querySelector(".foldkit-flow__pane"));
         assert.deepStrictEqual(net(onDocument), []);
         // Foldkit's runtime registers `pageshow` on the window itself and keeps it; the Mounts add nothing there
         assert.deepStrictEqual(
@@ -397,7 +346,7 @@ describe("lifetimes", () => {
           []
         );
 
-        for (const element of bound) {
+        for (const element of host.bound) {
           assert.strictEqual(d3Listeners(element ?? null), 0);
         }
 
@@ -409,24 +358,10 @@ describe("lifetimes", () => {
     "a connection pressed on a handle is ended when the app is disposed before the pointer moves: no document listener is left",
     () =>
       Effect.gen(function* pressed() {
-        const { container, wrapper } = mountPoint();
         const onDocument = spyOnListeners(document);
 
         yield* Effect.gen(function* running() {
-          yield* Effect.acquireRelease(
-            Effect.sync(() => Runtime.embed(hostApplication(container, abc()))),
-            (handle) =>
-              Effect.sync(() => {
-                handle.dispose();
-              })
-          );
-
-          yield* eventually(
-            () => wrapper.querySelectorAll(".foldkit-flow__handle").length,
-            (count) => count === 6
-          );
-
-          yield* Effect.sleep("150 millis");
+          const wrapper = yield* embedHost(abc());
 
           wrapper.querySelector(".foldkit-flow__handle.source")?.dispatchEvent(
             new MouseEvent("mousedown", {
