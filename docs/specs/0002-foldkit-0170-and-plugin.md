@@ -1,0 +1,65 @@
+# Spec 0002: Foldkit 0.170.0 and the Vite plugin, and a J9 that always checks memoisation
+
+Status: **spec** (frozen when its PR opens). Date: 2026-10-29. Decided by: the lead's assignment of 2026-10-29 (Foldkit 0.170.0 and `@foldkit/vite-plugin` 0.29.0 were published that day with peer `effect ~4.1.0`, which ends the wait recorded in spec 0000 and `AGENTS.md`), and a low finding of the review of PR 4.
+Binding for: `package.json` (catalog), `packages/flow/package.json`, `apps/example`, `tools/journey`, `AGENTS.md`, `STATE.md`. Based on `main` after spec 0001.
+
+## Goal
+
+The repository runs on a Foldkit release that declares the Effect version it is built and tested on, the example uses the Foldkit Vite plugin (hot Model preservation and dev tools), and no document still says "waiting for a release". The felt journey of spec 0001 is unchanged: a person opens the example and pans, zooms, drags, connects and box-selects, and the keyboard works. One journey step is made stricter: the J9 check that the DOM stays untouched by pan and zoom runs on any host.
+
+## Journey
+
+```text
+cd apps/example && devenv shell -- bunx vp dev     the dev server starts WITH the Foldkit plugin: no "No response from @foldkit/vite-plugin" notice,
+                                                    editing a view file keeps the Model (the flow stays where it was)
+devenv shell -- bun run build && bun run journey   the journey of spec 0001 passes on the build (J9 timing only on a quiet host, exit 75 otherwise)
+```
+
+## Constraints and values
+
+- **Versions follow the rule of `AGENTS.md`.** `packages/flow` is published: `effect` stays `~4.1.0` (the diagnostics find unstable APIs in its `src`; the published-range test decides), `foldkit` becomes `~0.170.0` (0.x, a minor may break). Tools and the example are not published: they use the catalog. `@foldkit/vite-plugin` is a development dependency of `apps/example` only, pinned in the catalog like Foldkit.
+- **Declared peers must now be true.** Foldkit 0.170.0 declares `effect ~4.1.0` and `@effect/platform-browser ~4.1.0`: the install prints no "incorrect peer dependency" warning for Foldkit, and the notes about it are removed. If a warning remains, it is named where it is kept.
+- **No behaviour change in the library** beyond what the new Foldkit release forces; anything it forces is a dated Revision.
+- **J9 is two checks and only one needs a quiet host.** The timing check is gated on `admitted` (spec 0001, round 3). The DOM-mutation check (a drag touches the dragged node and its own edges only, a zoom touches nothing) measures no time: it runs on every host, and a busy host yields only the timing as inconclusive.
+- **No suppressions** unless registered; the exception registry stays empty.
+
+## Falsifiers
+
+| # | Falsifier (must hold) | Gate | Negative control (must fail) |
+|---|---|---|---|
+| K1 | The lockfile has Foldkit 0.170.0 and the plugin 0.29.0, one Effect 4.1.0, and `packages/flow` peers `effect ~4.1.0`, `foldkit ~0.170.0` | `bun run test` (family and published-range tests) | peer `foldkit ~0.169.0` against an installed 0.170.0 is a documented mismatch; the published-range test fails for a `^4.1.0` Effect range |
+| K2 | The example's Vite config loads the plugin; the dev server starts and serves the app without the "No response from @foldkit/vite-plugin" notice | `bun run build`, a dev-server run observed in Chromium (the page renders, no error) | remove the plugin from the config: the notice returns |
+| K3 | The tests that boot a runtime no longer print the "No response from @foldkit/vite-plugin" notice, or the notice is explained where it stays | `bun run test` output | n/a (observation) |
+| K4 | No document says the repository waits for a Foldkit or plugin release | `grep` for `waiting`, `4.0.0 peer`, `issues/4` in `AGENTS.md`, `README.md`, `STATE.md`, `apps/example/AGENTS.md`, `vite.config.ts` | n/a |
+| K5 | On a busy host the journey reports the J9 timing as inconclusive (exit 75) AND still runs and reports the mutation check; a failed mutation check exits 1 even on a busy host | `tools/journey` tests with injected readings and an injected measurement | gate both checks on `admitted` again: the test that expects the mutation check to run on a busy host fails |
+| K6 | `bun run ready` exits 0; J9's timing holds by the rule of round 2: the first 3 admitted runs on the head, all logged, median of their gate values under 8 ms (2 more runs only if that median is 7 to 8 ms) | `ready`, `journey` | as spec 0000 |
+| K7 | A `vi.mock` imported from `vite-plus/test` fails lint (issue #5) | `bun run check` | the same file before the change: it passed |
+
+## Risks
+
+| Risk | Mitigation |
+|---|---|
+| Foldkit 0.170.0 changes an API the library uses (`Mount`, `html`, `submodel`, `customElement`, `Update.foldChild`, `story`) | `vp check` and the library's tests are the gate; every forced change is a Revision |
+| The plugin changes how the example builds or tests (it injects into Vite) | `bun run build`, the example tests and a dev-server run |
+| The plugin depends on `@effect/platform-node` and a second Effect copy appears in the lockfile | the family test (`effectFamily.ts`) fails on two Effect versions |
+| `@foldkit/oxlint-plugin` is behind Foldkit | read its release notes; bump only if needed, and say so |
+
+## Revisions
+
+Dated entries. A spec is revised only here after its PR opens.
+
+- **2026-10-29, plan written.**
+- **2026-10-29, built; what the build taught.**
+  - *Versions.* Catalog: `foldkit` 0.170.0, `@foldkit/vite-plugin` 0.29.0 (new; development dependency of `apps/example` only), `@foldkit/oxlint-plugin` 0.15.4 (0.15.3 before; it is the current release and `vp check` is clean on it). `packages/flow` peers: `effect ~4.1.0` (unchanged: the diagnostics still find unstable APIs in its `src`), `foldkit ~0.170.0`. `bun install` prints no peer warning. The family and published-range tests pass unchanged.
+  - *K2, observed.* The dev server (`vp dev`) started with the plugin (`[foldkit:devTools] MCP relay listening`), the page rendered five nodes with no console notice after 2.5 s (the bridge waits 500 ms), and a Model-preservation check passed: a node was dragged, `src/main.ts` was edited (the heading text), Vite hot-updated it, and the node kept the dragged position (the edit was reverted). The built example is 439 kB (417 kB without the plugin).
+  - *K3.* The notice no longer appears in the test output of the example or of `packages/flow`.
+  - *K7 added: issue #5, the `vite-plus/test` gap of `no-module-mocking`.* Ultracite's bundled build of the rule is what runs (the vendored copy was not loaded), so editing the copy alone changes nothing. The vendored rule now also knows `vi` from `vite-plus/test`, and the root config loads the vendored `index.ts` as plugin `anti-slop-local` and enables only `anti-slop-local/no-module-mocking`; `UPSTREAM.txt` records it and its retirement trigger. Control, observed: a scratch test file `vi.mock(...)` imported from `vite-plus/test` fails `vp check` with `anti-slop-local(no-module-mocking)`; before the change the same file passed (round 2 of PR 4). Issue #3 (`vp run` uses a downloaded Bun) is not touched by this spec.
+  - *K5 built so it is testable.* `tools/journey/checks.ts` holds the check type and the rules (`outcome`: a failure beats an inconclusive check; `performanceChecks`: the timing check is `inconclusive` on a busy host, the memoisation check is reported as measured). `host.ts`'s `admitted` (which skipped the measurement on a busy host) became `judged`: the measurement always runs, and the host verdict is read before and after to judge only the timing. `checks.test.ts` and `host.test.ts` cover it with injected readings and checks. Control: making `performanceChecks` report the memoisation check as inconclusive on a busy host fails `checks.test.ts`.
+- **2026-10-29, review round 1 of PR 6 (head `21d63a6`): three fixes.**
+  - *`apps/example/FOLDKIT.md` replaced whole* from the `create-foldkit-app` 0.41.0 template (`dist/templates/base/FOLDKIT.md`, which pins Foldkit 0.170.0), as `PROVENANCE.md` promised and `AGENTS.md` sends agents there first. One line differs from the 0.40.0 copy (line 107): `SecureRandom.SecureRandom` imported from `effect/crypto` with `BrowserCrypto.layerSecureRandom`, not `Crypto.Crypto`, which Effect 4.1.0 removed. `PROVENANCE.md` records the source.
+  - *How a failed admitted J9 run counts (the rerun rule).* Admission (`host.ts`) says the host was quiet enough to time; it does not make a drag deterministic: on this shared host a single run's median p95 has reached 8.1 to 10.9 ms at load 8 to 10 while its neighbours were 3 to 4 ms. So one journey run is not the verdict of a head. **The rule:** (1) a run that `host.ts` refuses (exit 75) counts for nothing; (2) a run that is admitted counts, pass or fail, and **none is discarded or rerun-until-green**: every admitted run on the head is listed in the PR body with its per-run p95s; (3) J9's timing holds for a head only if there are **at least 3 admitted runs and the median of their gate values (each already the median of three p95s) is under 8 ms**; (4) a failed memoisation check, or any other failed check, in **any** admitted or refused run fails the head (those checks are not timing); (5) the negative control (no lazy views) has a gate value of 34 ms, so the median of 3 separates a regression from noise by a factor of four. Applied to this head (code of `c471b8f`, `21d63a6` differs by one line of `AGENTS.md`): the admitted runs were 6, four passes (two of them 3.71 and 4.28 ms, the logs of the other two were not kept) and two failures (8.13 ms, and one whose value I did not keep); the median is therefore under 8 ms whatever the two unkept values are, because four of six are under it. The PR body states the failures.
+  - *`PROVENANCE.md`* said 67 files are identical to studio. This spec changes three of them (`rules/no-module-mocking.ts`, `UPSTREAM.txt`, `apps/example/FOLDKIT.md`), so 64 are identical now (derived by subtraction; the review counted 65 because it did not count `FOLDKIT.md`).
+- **2026-10-29, review round 2 of PR 6 (head `1894f50`): the rerun rule gets a stopping point, the evidence is redone, the count is measured.**
+  - *Stopping point, declared before running.* The rule of round 1 is replaced. **J9's timing holds for a head iff the FIRST 3 ADMITTED journey runs on the head under review, all logged, have a median of their three gate values under 8 ms.** N is 3 and is fixed before the runs: not "at least 3", not "until the median is green". A run `host.ts` refuses (exit 75) counts for nothing; an admitted run counts, pass or fail, and is not discarded or repeated. If the median is 8 ms or more, the head fails J9 and a fix means a new head and a new first three. More runs only by a declared rule: a head whose first three give a median within 1 ms of the limit (7 to 8 ms) gets exactly two more admitted runs and the median of all five decides; nothing else triggers more runs. A failed memoisation check or any other failed check in any run fails the head. Every admitted run is listed in the PR body with its per-run p95s, and its raw log is kept under `~/.local/state/foldkit-flow-verify/0002/`.
+  - *Evidence redone.* The six-run tally of round 1 is withdrawn (three runs had no kept value). The evidence is the first three admitted runs on the head after this commit (the code is that of `c471b8f`; only documents differ), run after this Revision was committed.
+  - *`PROVENANCE.md`:* 63 identical files, counted by blob hash against `b26c1cc` (round 1's 64 was by subtraction and wrong); `apps/example/src/styles.css`, changed by spec 0001, moved to a deviation row.
