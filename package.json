@@ -15,6 +15,7 @@
     "test": "vp run -r --no-cache test",
     "build": "vp run -r --no-cache build",
     "check:exceptions": "bun tools/quality/checkEffectExceptions.ts",
+    "journey": "bun tools/journey/journey.ts",
     "knip": "knip",
     "cpd": "jscpd --config .jscpd.json .",
     "secrets": "gitleaks git --config .gitleaks.toml --redact",

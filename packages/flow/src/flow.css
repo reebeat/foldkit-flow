@@ -12,6 +12,7 @@
 .foldkit-flow__pane {
   cursor: grab;
   outline-offset: -2px;
+  user-select: none;
 }
 
 .foldkit-flow__pane.panning {
@@ -24,6 +25,7 @@
   border-radius: 6px;
   box-sizing: border-box;
   cursor: default;
+  user-select: none;
 }
 
 .foldkit-flow__node:focus-visible {

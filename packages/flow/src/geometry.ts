@@ -111,6 +111,24 @@ export interface Lookups {
   readonly parentLookup: ParentLookup;
 }
 
+// A node that did not change keeps its xyflow base (and so its handle layout), so a lookup of a list that differs by one
+// node allocates for that node only.
+const baseCache = new WeakMap<FlowNode, NodeBase>();
+
+const baseOf = (node: FlowNode): NodeBase => {
+  const cached = baseCache.get(node);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const built = toNodeBase(node);
+
+  baseCache.set(node, built);
+
+  return built;
+};
+
 const lookupCache = new WeakMap<readonly FlowNode[], Lookups>();
 
 /**
@@ -127,7 +145,7 @@ export const lookupsOf = (nodes: readonly FlowNode[]): Lookups => {
   const nodeLookup = new Map<string, InternalNodeBase>();
   const parentLookup: ParentLookup = new Map();
 
-  adoptUserNodes(Array.map(nodes, toNodeBase), nodeLookup, parentLookup, {
+  adoptUserNodes(Array.map(nodes, baseOf), nodeLookup, parentLookup, {
     elevateNodesOnSelect: true,
   });
 

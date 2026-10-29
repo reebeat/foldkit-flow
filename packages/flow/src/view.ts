@@ -24,10 +24,12 @@ import {
 } from "./mounts.ts";
 import {
   FlowSnapshot,
+  boundsClass,
   handleClass,
   nodeClass,
   paneClass,
   paneElement,
+  rootClass,
   viewportClass,
 } from "./snapshot.ts";
 import { Interaction } from "./types.ts";
@@ -138,7 +140,8 @@ const nodeView = (
   h: HtmlBuilder<Message>,
   flowId: string,
   node: FlowNode,
-  absolute: XY,
+  x: number,
+  y: number,
   content: Html
 ) =>
   h.keyed("div")(
@@ -157,7 +160,7 @@ const nodeView = (
       h.Style({
         height: `${node.height}px`,
         position: "absolute",
-        transform: `translate(${absolute.x}px, ${absolute.y}px)`,
+        transform: `translate(${x}px, ${y}px)`,
         width: `${node.width}px`,
         zIndex: `${(node.parentId === undefined ? 0 : 10) + (node.selected ? 1 : 0)}`,
       }),
@@ -563,7 +566,8 @@ export const flowView = (options: FlowOptions) =>
         h,
         model.id,
         node,
-        at,
+        at.x,
+        at.y,
         viewInputs.renderNode(node),
       ]);
     });
@@ -584,7 +588,7 @@ export const flowView = (options: FlowOptions) =>
     return h.div(
       [
         h.Id(model.id),
-        h.Class("foldkit-flow"),
+        h.Class(rootClass),
         h.Style({
           height: "100%",
           overflow: "hidden",
@@ -619,6 +623,15 @@ export const flowView = (options: FlowOptions) =>
             ),
           ],
           [
+            h.div([
+              h.Class(boundsClass),
+              h.AriaHidden(true),
+              h.Style({
+                inset: "0",
+                pointerEvents: "none",
+                position: "absolute",
+              }),
+            ]),
             h.div(
               [
                 h.Class(viewportClass),

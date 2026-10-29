@@ -54,8 +54,24 @@ export const nodeClass = "foldkit-flow__node";
 
 export const handleClass = "foldkit-flow__handle";
 
+/** An empty block that fills the pane: xyflow's connection controller types its container as a `div`. */
+export const boundsClass = "foldkit-flow__bounds";
+
+/** The root element of a flow; the view gives it this class. */
+export const rootClass = "foldkit-flow";
+
+/** The pane that holds `element`, or that sits beside it in the same flow (the minimap and the controls are siblings). */
 export const paneOf = (element: Element): Element =>
-  element.closest(`.${paneClass}`) ?? element;
+  element.closest(`.${paneClass}`) ??
+  element.closest(`.${rootClass}`)?.querySelector(`.${paneClass}`) ??
+  element;
+
+/** The `div` with the pane's bounds, which XYHandle measures the pointer against. */
+export const boundsOf = (element: Element): Option.Option<HTMLDivElement> => {
+  const bounds = paneOf(element).querySelector(`.${boundsClass}`);
+
+  return bounds instanceof HTMLDivElement ? Option.some(bounds) : Option.none();
+};
 
 /** The snapshot the view last rendered onto the pane that holds `element`, or none before the first render. */
 export const readSnapshot = (element: Element): Option.Option<FlowSnapshot> => {

@@ -50,8 +50,19 @@ const effectConfig: EffectConfigInput = {
       strictness: "strict",
     },
     {
-      files: ["tools/quality/**"],
+      files: [
+        "tools/quality/**",
+        "tools/journey/journey.ts",
+        "tools/journey/stats.ts",
+      ],
       platform: "node",
+      role: "composition-root",
+      strictness: "strict",
+    },
+    {
+      // Runs inside the page: Puppeteer serialises each function and evaluates it in Chromium.
+      files: ["tools/journey/probe.ts"],
+      platform: "browser",
       role: "composition-root",
       strictness: "strict",
     },
@@ -116,8 +127,19 @@ export default defineConfig({
       ...effectConfigResult.overrides,
       {
         // unicorn/throw-new-error treats Schema.TaggedError class definitions as throw sites; they contain no throw.
-        files: ["tools/quality/effectExceptions.ts"],
+        files: [
+          "tools/quality/effectExceptions.ts",
+          "tools/journey/journey.ts",
+        ],
         rules: { "unicorn/throw-new-error": "off" },
+      },
+      {
+        // The browser gate adapts Puppeteer, a Promise API, through `attempt` (Effect.tryPromise) and probe.ts runs
+        // inside the page. Ultracite's promise-function-async asks for `async` on every Promise-returning arrow, and the
+        // Effect diagnostics then reject that `async` (and eslint's require-await rejects an async arrow without await),
+        // so the two preset rules contradict each other here. A Promise-returning arrow is the Effect.tryPromise form.
+        files: ["tools/journey/journey.ts", "tools/journey/probe.ts"],
+        rules: { "typescript/promise-function-async": "off" },
       },
       {
         // The Foldkit conventions (FOLDKIT.md): the framework's own rules, at the severity its recommended preset sets.

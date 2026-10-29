@@ -15,7 +15,7 @@ import type {
 } from "@xyflow/system";
 import { select } from "d3-selection";
 import type { Cause } from "effect";
-import { Array, Effect, Option, Queue, Schema, Stream } from "effect";
+import { Array, Effect, Option, Queue, Schedule, Schema, Stream } from "effect";
 import { constVoid, flow as compose } from "effect/Function";
 import * as Mount from "foldkit/mount";
 
@@ -27,13 +27,14 @@ import {
   withNodeSelection,
 } from "./selection.ts";
 import {
+  boundsOf,
   handleClass,
   paneOf,
   readSnapshot,
   viewportClass,
 } from "./snapshot.ts";
 import type { FlowSnapshot } from "./snapshot.ts";
-import type { Connection, FlowNode, Viewport, XY } from "./types.ts";
+import type { Connection, FlowEdge, FlowNode, Viewport, XY } from "./types.ts";
 
 // MOUNTS
 //
@@ -553,8 +554,9 @@ const beginConnection = (
 ) => {
   const snapshot = readSnapshot(element);
   const pane = paneOf(element);
+  const bounds = boundsOf(element);
 
-  if (Option.isNone(snapshot) || !(pane instanceof HTMLDivElement)) {
+  if (Option.isNone(snapshot) || Option.isNone(bounds)) {
     return;
   }
 
@@ -569,7 +571,7 @@ const beginConnection = (
     },
     connectionMode: ConnectionMode.Strict,
     connectionRadius: 20,
-    domNode: pane,
+    domNode: bounds.value,
     flowId: flow.id,
     getFromHandle: () => active.fromHandle,
     getTransform: () => transformOf(element),
@@ -624,7 +626,10 @@ const endGesture = (element: Element, active: ActiveConnection) =>
     }
   });
 
-const connectStream = (element: Element, from: ConnectFrom) =>
+const connectStream = (
+  element: Element,
+  resolve: () => Option.Option<ConnectFrom>
+) =>
   Stream.callback<ConnectMessage>((queue) =>
     Effect.gen(function* connect() {
       const send = sendTo(queue);
@@ -632,12 +637,18 @@ const connectStream = (element: Element, from: ConnectFrom) =>
 
       yield* Effect.addFinalizer(() => endGesture(element, active));
 
+      const begin = (event: MouseEvent | TouchEvent) => {
+        Option.map(resolve(), (from) => {
+          beginConnection(element, event, from, send, active);
+        });
+      };
+
       const start = (event: Event) => {
         if (isMouse(event) && event.button === 0) {
           event.stopPropagation();
-          beginConnection(element, event, from, send, active);
+          begin(event);
         } else if (isTouch(event)) {
-          beginConnection(element, event, from, send, active);
+          begin(event);
         }
       };
 
@@ -662,42 +673,80 @@ export const FlowHandle = Mount.defineStream("FlowHandle", {
     nodeId: Schema.NonEmptyString,
   },
   execute: ({ element, handleId, kind, nodeId }) =>
-    connectStream(element, { edgeId: undefined, handleId, nodeId, type: kind }),
+    connectStream(element, () =>
+      Option.some({ edgeId: undefined, handleId, nodeId, type: kind })
+    ),
   messages: connectMessages,
 });
+
+/** Dragging one end of an edge starts a connection from the other end: xyflow's reconnect takes the opposite handle. */
+const oppositeEnd = (edge: FlowEdge, end: "source" | "target"): ConnectFrom =>
+  end === "source"
+    ? {
+        edgeId: edge.id,
+        handleId: edge.targetHandle,
+        nodeId: edge.target,
+        type: "target",
+      }
+    : {
+        edgeId: edge.id,
+        handleId: edge.sourceHandle,
+        nodeId: edge.source,
+        type: "source",
+      };
 
 export const FlowReconnect = Mount.defineStream("FlowReconnect", {
   args: {
     edgeId: Schema.NonEmptyString,
     end: Schema.Literals(["source", "target"]),
   },
+  // the edge is looked up when the gesture starts: the other end may have been reconnected since this Mount ran
   execute: ({ edgeId, element, end }) =>
-    Stream.unwrap(
-      Effect.sync(() =>
-        Option.match(readSnapshot(element), {
-          onNone: () => Stream.empty,
-          onSome: ({ flow }) =>
-            Option.match(
-              Array.findFirst(flow.edges, (edge) => edge.id === edgeId),
-              {
-                onNone: () => Stream.empty,
-                onSome: (edge) =>
-                  connectStream(element, {
-                    edgeId,
-                    handleId:
-                      end === "source" ? edge.sourceHandle : edge.targetHandle,
-                    nodeId: end === "source" ? edge.source : edge.target,
-                    type: end,
-                  }),
-              }
-            ),
-        })
+    connectStream(element, () =>
+      Option.map(
+        Option.flatMap(readSnapshot(element), ({ flow }) =>
+          Array.findFirst(flow.edges, (edge) => edge.id === edgeId)
+        ),
+        (edge) => oppositeEnd(edge, end)
       )
     ),
   messages: connectMessages,
 });
 
 // MINIMAP: pan and zoom the flow from the minimap (XYMinimap drives the pane's XYPanZoom).
+
+const startMinimap = (element: Element, controller: PanZoomInstance) => {
+  const instance = XYMinimap({
+    domNode: element,
+    getTransform: () => transformOf(element),
+    getViewScale: () =>
+      Option.match(readSnapshot(element), {
+        onNone: () => 1,
+        onSome: ({ flow }) =>
+          minimapGeometry(flow.nodes, flow.viewport, flow.size).scale,
+      }),
+    panZoom: controller,
+  });
+
+  instance.update({
+    height: minimapSize.height,
+    pannable: true,
+    translateExtent: unbounded,
+    width: minimapSize.width,
+    zoomStep: 1,
+    zoomable: true,
+  });
+
+  return instance;
+};
+
+// A child's Mount runs before its parent's, so the pane's controller may not exist yet when the minimap mounts: wait for
+// it a few milliseconds (it is created in the same patch), and run without one if the pane never gets a controller.
+const panZoomOf = (pane: Element) =>
+  Effect.suspend(() => Effect.fromNullishOr(panZooms.get(pane))).pipe(
+    Effect.retry({ schedule: Schedule.spaced("5 millis"), times: 40 }),
+    Effect.option
+  );
 
 export const FlowMinimap = Mount.defineStream("FlowMinimap", {
   execute: ({ element }) =>
@@ -706,43 +755,16 @@ export const FlowMinimap = Mount.defineStream("FlowMinimap", {
     >((queue) =>
       Effect.gen(function* minimap() {
         yield* Effect.acquireRelease(
-          Effect.sync(() => {
-            const pane = paneOf(element);
-            const controller = panZooms.get(pane);
-
-            const geometry = () =>
-              Option.match(readSnapshot(element), {
-                onNone: () => 1,
-                onSome: ({ flow }) =>
-                  minimapGeometry(flow.nodes, flow.viewport, flow.size).scale,
-              });
-
-            if (controller === undefined) {
-              return Option.none();
-            }
-
-            const instance = XYMinimap({
-              domNode: element,
-              getTransform: () => transformOf(element),
-              getViewScale: geometry,
-              panZoom: controller,
-            });
-
-            instance.update({
-              height: minimapSize.height,
-              pannable: true,
-              translateExtent: unbounded,
-              width: minimapSize.width,
-              zoomStep: 1,
-              zoomable: true,
-            });
-
-            return Option.some(instance);
-          }),
+          Effect.map(
+            panZoomOf(paneOf(element)),
+            Option.map((controller) => startMinimap(element, controller))
+          ),
           (instance) =>
             Effect.sync(() => {
               Option.map(instance, (started) => {
                 started.destroy();
+                // as for the pane: `destroy` detaches the `zoom` handler only
+                select(element).on(".zoom", null);
               });
             })
         );

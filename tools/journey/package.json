@@ -1,0 +1,21 @@
+{
+  "name": "@foldkit-flow/journey",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "journey": "bun journey.ts",
+    "test": "vp test run"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:",
+    "puppeteer-core": "25.16.0"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

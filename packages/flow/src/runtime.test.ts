@@ -86,6 +86,8 @@ describe("the rendered flow", () => {
           wrapper.querySelector("[role='img']")?.getAttribute("aria-label"),
           "Minimap"
         );
+        // xyflow's connection controller measures the pointer against a `div` with the pane's bounds
+        assert.isNotNull(wrapper.querySelector("div.foldkit-flow__bounds"));
       })
   );
 
@@ -312,13 +314,16 @@ describe("lifetimes", () => {
 
           const pane = wrapper.querySelector(".foldkit-flow__pane");
           const nodes = [...wrapper.querySelectorAll(".foldkit-flow__node")];
+          const minimap = wrapper.querySelector(".foldkit-flow__minimap");
 
           // the controllers are attached: d3 bound the pane (zoom) and every node (drag), and the Mounts listen
           assert.isAbove(d3Listeners(pane), 0);
           assert.isAbove(d3Listeners(nodes[0] ?? null), 0);
+          // the minimap sits beside the pane, not inside it: its controller still finds the pane's
+          assert.isAbove(d3Listeners(minimap), 0);
           assert.isAbove(onDocument.add.mock.calls.length, 0);
 
-          return [pane, ...nodes];
+          return [pane, minimap, ...nodes];
         }).pipe(Effect.scoped);
 
         yield* Effect.sleep("150 millis");
