@@ -44,6 +44,9 @@ const frameToleranceMs = 33.5;
 /** J9: the number of pointer moves of the measured drag. */
 const moveCount = 150;
 
+/** J9: how many times the drag is measured; the gate is the median of the runs' p95. */
+const runCount = 3;
+
 class JourneyError extends Schema.TaggedError<
   JourneyError,
   { readonly brand: unique symbol }
@@ -751,35 +754,59 @@ const performanceJourney = (session: Session, cdp: CDPSession) =>
 
     const edges = yield* edgeCount(session);
     const zoomTouched = yield* zoomLarge(session);
-    const measured = yield* measureDrag(session, cdp);
 
-    const moves = columns(measured.moves);
-    const idle = columns(measured.idle);
-    const frames = summarise(measured.frames);
-    const smooth = shareAtMost(measured.frames, frameToleranceMs);
+    // The host is shared and other work shows up as an outlier: the drag is measured `runCount` times and the gate is
+    // the median of the runs' p95, so one disturbed run cannot fail it and one lucky run cannot pass it.
+    const drags = yield* Effect.forEach(Arr.range(1, runCount), () =>
+      clickButton(session, "Fit view").pipe(
+        Effect.andThen(measureDrag(session, cdp))
+      )
+    );
+
+    const runs = Arr.map(drags, (measured) => columns(measured.moves));
+    const scriptP95s = Arr.map(runs, (run) => run.script.p95);
+    const gate = summarise(scriptP95s).p50;
+    const moves = columns(Arr.flatMap(drags, (measured) => measured.moves));
+    const idle = columns(Arr.flatMap(drags, (measured) => measured.idle));
+    const allFrames = Arr.flatMap(drags, (measured) => measured.frames);
+    const frames = summarise(allFrames);
+    const smooth = shareAtMost(allFrames, frameToleranceMs);
+
+    const touchedNodes = Math.max(
+      ...Arr.map(drags, (measured) => measured.touched.nodes)
+    );
+
+    const touchedEdges = Math.max(
+      ...Arr.map(drags, (measured) => measured.touched.edges)
+    );
+
+    const travelled = Math.min(
+      ...Arr.map(drags, (measured) => measured.travelled)
+    );
 
     const checks = [
       check(
         "J9",
-        `dragging one node of ${nodes} nodes and ${edges} edges: p95 scripting time (update, view, patch) per pointer move under ${scriptBudgetMs} ms, and 95% of frames within ${frameToleranceMs} ms`,
+        `dragging one node of ${nodes} nodes and ${edges} edges: median of ${runCount} runs of the p95 scripting time (update, view, patch) per pointer move under ${scriptBudgetMs} ms, and 95% of frames within ${frameToleranceMs} ms`,
         nodes === 500 &&
           edges === 700 &&
-          moves.script.p95 < scriptBudgetMs &&
+          gate < scriptBudgetMs &&
           smooth >= 0.95 &&
-          measured.travelled > 100,
-        `per pointer move (${moves.script.count} moves, ms, p50/p95/max): scripting ${ms(moves.script.p50)}/${ms(moves.script.p95)}/${ms(moves.script.max)}, style ${ms(moves.style.p50)}/${ms(moves.style.p95)}/${ms(moves.style.max)}, layout ${ms(moves.layout.p50)}/${ms(moves.layout.p95)}/${ms(moves.layout.max)}, all main-thread tasks ${ms(moves.task.p50)}/${ms(moves.task.p95)}/${ms(moves.task.max)}; the same two frames idle: tasks p50 ${ms(idle.task.p50)} ms; frame interval p50 ${frames.p50.toFixed(1)} ms, p95 ${frames.p95.toFixed(1)} ms, max ${frames.max.toFixed(1)} ms (${frames.count} frames), ${(smooth * 100).toFixed(1)}% within ${frameToleranceMs} ms; the node travelled ${measured.travelled} px on screen`
+          travelled > 100,
+        `p95 scripting per run: ${Arr.join(Arr.map(scriptP95s, ms), ", ")} ms, median ${ms(gate)}; all ${moves.script.count} moves (ms, p50/p95/max): scripting ${ms(moves.script.p50)}/${ms(moves.script.p95)}/${ms(moves.script.max)}, style ${ms(moves.style.p50)}/${ms(moves.style.p95)}/${ms(moves.style.max)}, layout ${ms(moves.layout.p50)}/${ms(moves.layout.p95)}/${ms(moves.layout.max)}, all main-thread tasks ${ms(moves.task.p50)}/${ms(moves.task.p95)}/${ms(moves.task.max)}; the same two frames idle: tasks p50 ${ms(idle.task.p50)} ms; frame interval p50 ${frames.p50.toFixed(1)} ms, p95 ${frames.p95.toFixed(1)} ms, max ${frames.max.toFixed(1)} ms (${frames.count} frames), ${(smooth * 100).toFixed(1)}% within ${frameToleranceMs} ms; the node travelled at least ${travelled} px on screen`
       ),
       check(
         "J9",
-        "memoisation holds: a drag touches the dragged node and its own edges only, a zoom touches nothing",
-        measured.touched.nodes <= 1 &&
-          measured.touched.edges <= 12 &&
-          zoomTouched.total === 0,
-        `drag: ${measured.touched.nodes} node and ${measured.touched.edges} edges mutated of ${nodes} and ${edges}; ten wheel steps: ${zoomTouched.total} mutations`
+        "memoisation holds: a drag touches the dragged node (and the node that was selected before it) and its own edges only, a zoom touches nothing",
+        touchedNodes <= 2 && touchedEdges <= 12 && zoomTouched.total === 0,
+        `drag: ${touchedNodes} nodes and ${touchedEdges} edges mutated of ${nodes} and ${edges}; ten wheel steps: ${zoomTouched.total} mutations`
       ),
     ];
 
-    return { checks, summaries: { frames, idle, moves, smooth } };
+    return {
+      checks,
+      summaries: { frames, idle, moves, runs: scriptP95s, smooth },
+    };
   });
 
 // MAIN
