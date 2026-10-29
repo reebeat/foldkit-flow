@@ -5,6 +5,7 @@ import {
   Option,
   Order,
   Path,
+  Result,
   Record as Rec,
   Schema,
   String as Str,
@@ -268,6 +269,37 @@ const unstableApiUses = (toolRoot: string, packageDirectory: string) =>
     );
   }).pipe(Effect.scoped);
 
+// The in-source `effect-diagnostics` directives (file form and next-line form) can switch a stability diagnostic off,
+// and the diagnostics run honours them, so they would hide an unstable use from it. A published package may not.
+const hidingDirective =
+  /@effect-diagnostics(?:-next-line)?[^\n*]*\b(?:unstableApiUsage|experimentalApiUsage)\s*:\s*(?:off|skip-file)/u;
+
+/** The `file:line` of every directive in a package's published sources (tests excluded) that hides a stability finding. */
+const hiddenStabilityDirectives = (packageDirectory: string) =>
+  Effect.gen(function* hidden() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const source = path.join(packageDirectory, "src");
+    const entries = yield* fs.readDirectory(source, { recursive: true });
+
+    const files = Arr.filter(
+      entries,
+      (entry) => Str.endsWith(".ts")(entry) && !Str.endsWith(".test.ts")(entry)
+    );
+
+    const perFile = yield* Effect.forEach(files, (file) =>
+      Effect.map(fs.readFileString(path.join(source, file)), (text) =>
+        Arr.filterMap(Str.split(text, "\n"), (line, index) =>
+          hidingDirective.test(line)
+            ? Result.succeed(`src/${file}:${index + 1}`)
+            : Result.failVoid
+        )
+      )
+    );
+
+    return Arr.flatten(perFile);
+  });
+
 /**
  * Findings for every package under `<packagesRoot>/packages`: the Effect range of each is checked against the unstable
  * APIs its published sources use. `toolRoot` is the directory `effect-tsgo` is installed in (the repository root).
@@ -290,10 +322,17 @@ export const checkPublishedPackages = (
           yield* fs.readFileString(path.join(directory, "package.json"))
         );
 
-        return effectRangeFindings(
-          manifest,
-          yield* unstableApiUses(toolRoot, directory)
-        );
+        return [
+          ...effectRangeFindings(
+            manifest,
+            yield* unstableApiUses(toolRoot, directory)
+          ),
+          ...Arr.map(
+            yield* hiddenStabilityDirectives(directory),
+            (site) =>
+              `${manifest.name}: ${site} turns off an unstable or experimental API diagnostic; a published package must not hide its unstable use from this check`
+          ),
+        ];
       })
     );
 

@@ -98,6 +98,45 @@ describe("Effect exception registry", () => {
       }).pipe(Effect.provide(NodeServices.layer))
   );
 
+  it.effect(
+    "fails on an effect-diagnostics directive without an entry, in the line and the file form",
+    () =>
+      Effect.gen(function* diagnosticsDirectives() {
+        const { findings } = yield* check(
+          [
+            {
+              path: "src/b.ts",
+              text: "// @effect-diagnostics-next-line unstableApiUsage:off\nexport const a = 1;\n// @effect-diagnostics floatingEffect:off\nexport const b = 2;\n",
+            },
+          ],
+          []
+        );
+
+        assert.deepStrictEqual(findings, [
+          "src/b.ts:1: unregistered @effect-diagnostics-next-line",
+          "src/b.ts:3: unregistered @effect-diagnostics",
+        ]);
+      }).pipe(Effect.provide(NodeServices.layer))
+  );
+
+  it.effect(
+    "passes when an effect-diagnostics directive has an entry for its file and directive",
+    () =>
+      Effect.gen(function* registeredDirective() {
+        const { findings } = yield* check(
+          [
+            {
+              path: "src/b.ts",
+              text: "// @effect-diagnostics-next-line unstableApiUsage:off\nexport const a = 1;\n",
+            },
+          ],
+          [entry("EX-0002", "src/b.ts", "@effect-diagnostics-next-line")]
+        );
+
+        assert.deepStrictEqual(findings, []);
+      }).pipe(Effect.provide(NodeServices.layer))
+  );
+
   it.effect("fails on an entry whose suppression was removed", () =>
     Effect.gen(function* stale() {
       const { findings } = yield* check(

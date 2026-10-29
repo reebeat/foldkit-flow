@@ -190,4 +190,32 @@ describe("checkPublishedPackages", () => {
         assert.deepStrictEqual(yield* findingsOf("^4.1.0", stableImport), []);
       })
   );
+
+  it.effect(
+    "refuses a published package whose source switches the stability diagnostic off on the line, even under a tilde range",
+    () =>
+      Effect.gen(function* hidden() {
+        const findings = yield* findingsOf(
+          "~4.1.0",
+          `// @effect-diagnostics-next-line unstableApiUsage:off\n${barrelImport}`
+        );
+
+        assert.strictEqual(findings.length, 1);
+        assert.include(findings[0], "lib: src/index.ts:1 turns off");
+      })
+  );
+
+  it.effect(
+    "refuses the same switch-off at file level, for the experimental diagnostic",
+    () =>
+      Effect.gen(function* hidden() {
+        const findings = yield* findingsOf(
+          "^4.1.0",
+          `// @effect-diagnostics experimentalApiUsage:off\n${stableImport}`
+        );
+
+        assert.strictEqual(findings.length, 1);
+        assert.include(findings[0], "turns off");
+      })
+  );
 });

@@ -42,7 +42,7 @@ export class RegistryViolations extends Schema.TaggedError<
 }) {}
 
 const directivePattern =
-  /(?:oxlint-disable(?:-next-line|-line)?|eslint-disable(?:-next-line|-line)?|@ts-expect-error|@ts-ignore|@ts-nocheck)/gu;
+  /(?:oxlint-disable(?:-next-line|-line)?|eslint-disable(?:-next-line|-line)?|@ts-expect-error|@ts-ignore|@ts-nocheck|@effect-diagnostics(?:-next-line)?)/gu;
 
 const sourcePattern = /\.[cm]?[jt]sx?$/u;
 
