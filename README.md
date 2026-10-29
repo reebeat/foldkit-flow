@@ -79,7 +79,7 @@ What the Flow gives you: custom node views, handles, three edge types with an op
 
 ## Performance
 
-Measured, not assumed: `bun run journey` drags one node of the 500-node, 700-edge graph in headless Chromium and reports the numbers (spec 0001, falsifier J9). Foldkit's render per pointer move meets the budget because the node and edge views are keyed lazy views with primitive arguments: only the dragged node and its own edges are rendered. Pan and zoom change the viewport element's transform only and render no node.
+Measured, not assumed: `bun run journey` drags one node of the 500-node, 700-edge graph in headless Chromium and reports the numbers (spec 0001, falsifier J9). It times only on a quiet host: when the load average is above half the cores, or memory, memory pressure or swap-in are over the limits, or a reading is unreadable, J9 reports `inconclusive: host busy (load X)` and the command exits 75 (not run, never passed). Foldkit's render per pointer move meets the budget because the node and edge views are keyed lazy views with primitive arguments: only the dragged node and its own edges are rendered. Pan and zoom change the viewport element's transform only and render no node.
 
 ## Credit
 
