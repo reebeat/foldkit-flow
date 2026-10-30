@@ -8,7 +8,7 @@ npm error 404  The requested resource '@tsukuri/flow@0.1.0-alpha.0' could not be
 npm error 404
 npm error 404 Note that you can also install from a
 npm error 404 tarball, folder, http url, or git url.
-npm error A complete log of this run can be found in: /home/nori/.npm/_logs/2026-10-30T09_57_47_576Z-debug-0.log
+npm error A complete log of this run can be found in: /home/nori/.npm/_logs/2026-10-30T10_25_34_014Z-debug-0.log
 exit=1
 
 ## 1. first release: version 0.1.0-alpha.0, the Publish step of release.yml, run as written
@@ -17,8 +17,8 @@ npm notice
 npm notice 📦  @tsukuri/flow@0.1.0-alpha.0
 npm notice Tarball Contents
 npm notice 1.1kB LICENSE
-npm notice 1.8kB NOTICE
-npm notice 2.1kB README.md
+npm notice 2.1kB NOTICE
+npm notice 2.5kB README.md
 npm notice 2.9kB flow.css
 npm notice 29.6kB index.d.mts
 npm notice 60.2kB index.mjs
@@ -29,10 +29,10 @@ npm notice Tarball Details
 npm notice name: @tsukuri/flow
 npm notice version: 0.1.0-alpha.0
 npm notice filename: tsukuri-flow-0.1.0-alpha.0.tgz
-npm notice package size: 24.4 kB
-npm notice unpacked size: 99.8 kB
-npm notice shasum: fde7e42f13982e8b97ecf61c7b461e54ae302b8e
-npm notice integrity: sha512-8JsMIVNKHTN1V[...]fQBfseEDjXm+w==
+npm notice package size: 24.7 kB
+npm notice unpacked size: 100.5 kB
+npm notice shasum: 77dc83daae5cf308e551fb3651bbaadaed9fa7ad
+npm notice integrity: sha512-qh10SBUKRx3/n[...]mqOw6jPsDr6Sg==
 npm notice total files: 9
 npm notice
 npm notice Publishing to http://127.0.0.1:4873/ with tag alpha and public access
@@ -54,8 +54,8 @@ npm notice
 npm notice 📦  @tsukuri/flow@0.1.0-alpha.1
 npm notice Tarball Contents
 npm notice 1.1kB LICENSE
-npm notice 1.8kB NOTICE
-npm notice 2.1kB README.md
+npm notice 2.1kB NOTICE
+npm notice 2.5kB README.md
 npm notice 2.9kB flow.css
 npm notice 29.6kB index.d.mts
 npm notice 60.2kB index.mjs
@@ -66,10 +66,10 @@ npm notice Tarball Details
 npm notice name: @tsukuri/flow
 npm notice version: 0.1.0-alpha.1
 npm notice filename: tsukuri-flow-0.1.0-alpha.1.tgz
-npm notice package size: 24.4 kB
-npm notice unpacked size: 99.8 kB
-npm notice shasum: d3e255d4a983828a24c5bad645220cf6ca68924a
-npm notice integrity: sha512-f0CxkubP8eoss[...]Vmb6UglcjXogw==
+npm notice package size: 24.7 kB
+npm notice unpacked size: 100.5 kB
+npm notice shasum: b21cb5da715ef2fe821a233bc4b858996f7034de
+npm notice integrity: sha512-53vzmB6El+sj/[...]nHUsE34n+BRYQ==
 npm notice total files: 9
 npm notice
 npm notice Publishing to http://127.0.0.1:4873/ with tag alpha and public access
@@ -88,7 +88,7 @@ versions:
 
 ## 4. the published tarball, as the registry serves it
 tsukuri-flow-0.1.0-alpha.1.tgz
-24428 ./tsukuri-flow-0.1.0-alpha.1.tgz
+24712 ./tsukuri-flow-0.1.0-alpha.1.tgz
 files:
 package/flow.css
 package/index.d.mts
