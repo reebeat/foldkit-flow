@@ -1,0 +1,4 @@
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  test/release.test.ts > licence hygiene: what ships is flow's own MIT code and its attributions > no source of the package carries an Apache or other copied-code header: it is original MIT code (control: the scan finds one in a copied
+AssertionError: expected '// Licensed under the Apache License,…' not to match /Apache|Copied from|Provenance: (?:c…/iu
+      Tests  1 failed | 59 passed (60)

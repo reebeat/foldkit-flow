@@ -1,0 +1,31 @@
+baseline (the real files, unmutated)
+  token: (no finding)
+  mode : (no finding)
+  hold : (no finding)
+
+FAILS as it should  F7  a second step of the check job reads the token
+    1 finding(s); first: release.yml job check reads the token in 2 steps; it may be read in one
+FAILS as it should  F7  secretspec.toml names another secret
+    4 finding(s); first: no workflow reads NPM_TOKEN_OTHER, which secretspec.toml declares
+FAILS as it should  F7  the token is echoed in the Publish step
+    1 finding(s); first: release.yml job publish step Publish holds the token and runs something that can print it
+FAILS as it should  F8  the check job loses its --dry-run
+    1 finding(s); first: release.yml: with mode "check" on refs/heads/main the job check runs and holds a publish command
+FAILS as it should  F8  the publish job runs in check mode too
+    3 finding(s); first: release.yml: with mode "check" on refs/heads/main the job publish runs and holds a publish command
+FAILS as it should  F9  the Release hold step is deleted
+    1 finding(s); first: release.yml: job publish publishes and has no step that tests .github/release-hold
+FAILS as it should  F9  the hold step gets continue-on-error
+    1 finding(s); first: release.yml: job publish sets continue-on-error on the release hold step
+FAILS as it should  F5  effect peer ^4.1.0 on the real manifest
+    1 finding(s); first: effect
+FAILS as it should  F5  foldkit peer >=0.170.0 on the real manifest
+    1 finding(s); first: foldkit
+FAILS as it should  F1  the real manifest says Apache-2.0
+    1 finding(s); first: @tsukuri/flow: license is Apache-2.0, the repository's is MIT
+FAILS as it should  F1  the real manifest exports a .js file
+    1 finding(s); first: @tsukuri/flow: export . is ./index.js, not a ./src/*.ts or ./src/*.css file
+FAILS as it should  F1  the real manifest loses publishConfig
+    2 finding(s); first: @tsukuri/flow: publishConfig.access must be "public"
+FAILS as it should  F2  the real listing plus the Apache text, a source file and a map
+    3 finding(s); first: LICENSES/Apache-2.0.txt

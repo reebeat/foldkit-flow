@@ -1,0 +1,19 @@
+## tsc, no skipLibCheck, strict, against the installed registry tarball
+tsc exit=0
+
+## vite build (bundles the JS and the stylesheet export)
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 439 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.19 kB │ gzip:   0.15 kB
+dist/assets/index-Dv9pf8Tw.css    2.40 kB │ gzip:   0.77 kB
+dist/assets/index-CNdDe-Vp.js   317.32 kB │ gzip: 105.63 kB
+✓ built in 2.47s
+
+## the stylesheet reached the bundle
+1
+
+## node imports the ESM entry
+Attribution Connection EdgeKind FlowEdge FlowNode HandleDef Interaction Message Model OutMessage Side Viewport XY addEdge attributionHref attributionLabel attributionView defaultAttribution defineFlow init reconnectEdge selectedEdgeIds selectedNodeIds xyflowControllers

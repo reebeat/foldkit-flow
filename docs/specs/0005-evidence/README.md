@@ -21,11 +21,11 @@ Measured on 2026-10-30 on the head of `feat/0005-npm-release`, with Node 24.21.0
 
 Nine files: the built library and its declarations, the stylesheet, the generated manifest, the MIT `LICENSE`, `NOTICE` and `README.md`. No source, no test, no map, no `.github`, no `tools`, no `LICENSES/Apache-2.0.txt`. The registry served the same nine files back (section 3).
 
-## 2. A control the consumer check and the import check catch (`control-missing-peer.log`)
+## 2. A control the consumer check and the import check catch (`control-missing-peer.txt`)
 
 `foldkit` removed from `peerDependencies` of `packages/flow/package.json` (and restored afterwards), then `bun run release:stage`: exit 1, one finding per source file that imports `foldkit` (`src/view.ts imports foldkit, which is not in dependencies or peerDependencies`, and the built `index.mjs`). Without the peer the bundler also **inlined** Foldkit into `index.mjs` (275 kB against 60 kB), which is why the scratch consumer alone would not have caught it and `importFindings` reads the sources too (the lesson of pg-txmode spec 0006, Revisions 1 and its evidence M1). The scratch consumer has its own controls in `tools/release/test/consumer.test.ts`.
 
-## 3. The `Publish` step against a registry (`registry-rehearsal.log`)
+## 3. The `Publish` step against a registry (`registry-rehearsal.txt`)
 
 The real `Publish` step of `.github/workflows/release.yml` (its `run:` text read out of the file, `devenv` stubbed to `exec "$@"`), with the real `npm`, in a scratch tree that holds `packages/flow/dist` (the staged one, version set to `0.1.0-alpha.0`, then `0.1.0-alpha.1`) and `.changeset/pre.json` (`{ "mode": "pre", "tag": "alpha" }`):
 
@@ -37,7 +37,7 @@ The real `Publish` step of `.github/workflows/release.yml` (its `run:` text read
 | 3 | `0.1.0-alpha.1`: published with `--tag alpha`; dist-tags `{latest: 0.1.0-alpha.0, alpha: 0.1.0-alpha.1}`: **`alpha` follows every release; `latest` stays on the first** (the registry set it on the first publish; nothing moves it. On Verdaccio. What real npm does on a first publish with `--tag alpha` was observed for `@pg-txmode/*` (pg-txmode spec 0006, Revisions, "the first publish is observed": `latest` is set); for a later publish with `--tag alpha` it was not observed on npm) |
 | 4 | `npm pack @tsukuri/flow@0.1.0-alpha.1` from the registry: the same nine files, 24428 bytes, and the generated `package.json` |
 
-## 4. A consumer project that installs the registry tarball (`consumer-install.log`)
+## 4. A consumer project that installs the registry tarball (`consumer-install.txt`)
 
 A fresh project with `npm i @tsukuri/flow@alpha foldkit@0.170.0 effect@4.1.0 @effect/platform-browser@4.1.0 typescript@7.0.2 vite@7` (no peer conflict, no `ERESOLVE`): `tsc` of a file that imports `@tsukuri/flow`, `@tsukuri/flow/testing` and `@tsukuri/flow/flow.css` with `strict` and **without** `skipLibCheck`: exit 0; `vite build`: the stylesheet export reached the bundle (one `foldkit-flow` rule file) and the JavaScript bundled (439 modules); `node -e 'import("@tsukuri/flow")'` lists the 24 runtime exports. **One finding, not fixed here:** TypeScript 7 checks side-effect imports, so `import "@tsukuri/flow/flow.css"` fails with `TS2882` in a project that has no `*.css` declaration (Vite's `vite/client` types are one; the log's project has them). The README says so.
 
@@ -57,6 +57,6 @@ In a scratch directory outside the repository (a copy of the root `package.json`
 
 **The median of the three gate values is 4.62 ms, under the 8 ms line: J9's timing holds for this head by the declared rule.** Run 3 failed on its own gate value (9.50 ms; p50 scripting per move 3.16 ms against 2.65 and 2.78 in runs 1 and 2). The cause was not isolated: the host's runnable-task count was 14 when the run was launched and 7 when the journey read it (load average 5.88 before, under the admission limit), but no per-process attribution was taken. It is logged, not discarded, and the rule does not ask a head to pass every run. The memoisation check (2 nodes and 2 edges mutated of 500 and 700 by a drag, 0 by ten wheel steps) passed in all three.
 
-## 7. Negative controls on the real files (`controls-real-files.log`, `control-f11-apache-header.log`)
+## 7. Negative controls on the real files (`controls-real-files.txt`, `control-f11-apache-header.txt`)
 
 Beside the fixture controls inside the tests, the real files were mutated **in memory** by a throwaway script (the same functions the tests call; nothing in the repository was edited; the script is not kept, the log is): the unmutated files give no finding from the token, mode and hold rules; then each of these is caught with the first finding shown in the log: a second step of the `check` job that reads `NPM_TOKEN`; `secretspec.toml` naming another secret; the token echoed in `Publish`; the `check` job without `--dry-run`; the `publish` job without its mode condition; the `Release hold` step deleted; `continue-on-error` on it; the real manifest with `effect ^4.1.0`, with `foldkit >=0.170.0`, with licence `Apache-2.0`, with an export `./index.js`, without `publishConfig`; a listing with `LICENSES/Apache-2.0.txt`, a source file and a map. One control edited a real file: a line `Licensed under the Apache License` at the top of `packages/flow/src/xyflow.ts` made `release.test.ts` fail (`expected ... not to match /Apache|Copied from|Provenance: .../`, 1 failed, 59 passed); the line was removed afterwards (`git status` clean).

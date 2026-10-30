@@ -1,0 +1,145 @@
+throwaway token length: 116 (value never printed)
+
+## 0. npm view before any publish (real npm client, local registry)
+npm error code E404
+npm error 404 Not Found - GET http://127.0.0.1:4873/@tsukuri%2fflow - no such package available
+npm error 404
+npm error 404  The requested resource '@tsukuri/flow@0.1.0-alpha.0' could not be found or you do not have permission to access it.
+npm error 404
+npm error 404 Note that you can also install from a
+npm error 404 tarball, folder, http url, or git url.
+npm error A complete log of this run can be found in: /home/nori/.npm/_logs/2026-10-30T09_57_47_576Z-debug-0.log
+exit=1
+
+## 1. first release: version 0.1.0-alpha.0, the Publish step of release.yml, run as written
+@tsukuri/flow@0.1.0-alpha.0 is not on the registry: publishing
+npm notice
+npm notice 📦  @tsukuri/flow@0.1.0-alpha.0
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 1.8kB NOTICE
+npm notice 2.1kB README.md
+npm notice 2.9kB flow.css
+npm notice 29.6kB index.d.mts
+npm notice 60.2kB index.mjs
+npm notice 981B package.json
+npm notice 502B testing.d.mts
+npm notice 560B testing.mjs
+npm notice Tarball Details
+npm notice name: @tsukuri/flow
+npm notice version: 0.1.0-alpha.0
+npm notice filename: tsukuri-flow-0.1.0-alpha.0.tgz
+npm notice package size: 24.4 kB
+npm notice unpacked size: 99.8 kB
+npm notice shasum: fde7e42f13982e8b97ecf61c7b461e54ae302b8e
+npm notice integrity: sha512-8JsMIVNKHTN1V[...]fQBfseEDjXm+w==
+npm notice total files: 9
+npm notice
+npm notice Publishing to http://127.0.0.1:4873/ with tag alpha and public access
++ @tsukuri/flow@0.1.0-alpha.0
+step exit=0
+dist-tags:
+{
+  "latest": "0.1.0-alpha.0",
+  "alpha": "0.1.0-alpha.0"
+}
+
+## 2. the same step again: the version is on the registry, nothing is published
+@tsukuri/flow@0.1.0-alpha.0 is on the registry: skipped
+step exit=0
+
+## 3. second release: version 0.1.0-alpha.1
+@tsukuri/flow@0.1.0-alpha.1 is not on the registry: publishing
+npm notice
+npm notice 📦  @tsukuri/flow@0.1.0-alpha.1
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 1.8kB NOTICE
+npm notice 2.1kB README.md
+npm notice 2.9kB flow.css
+npm notice 29.6kB index.d.mts
+npm notice 60.2kB index.mjs
+npm notice 981B package.json
+npm notice 502B testing.d.mts
+npm notice 560B testing.mjs
+npm notice Tarball Details
+npm notice name: @tsukuri/flow
+npm notice version: 0.1.0-alpha.1
+npm notice filename: tsukuri-flow-0.1.0-alpha.1.tgz
+npm notice package size: 24.4 kB
+npm notice unpacked size: 99.8 kB
+npm notice shasum: d3e255d4a983828a24c5bad645220cf6ca68924a
+npm notice integrity: sha512-f0CxkubP8eoss[...]Vmb6UglcjXogw==
+npm notice total files: 9
+npm notice
+npm notice Publishing to http://127.0.0.1:4873/ with tag alpha and public access
++ @tsukuri/flow@0.1.0-alpha.1
+step exit=0
+dist-tags:
+{
+  "latest": "0.1.0-alpha.0",
+  "alpha": "0.1.0-alpha.1"
+}
+versions:
+[
+  "0.1.0-alpha.0",
+  "0.1.0-alpha.1"
+]
+
+## 4. the published tarball, as the registry serves it
+tsukuri-flow-0.1.0-alpha.1.tgz
+24428 ./tsukuri-flow-0.1.0-alpha.1.tgz
+files:
+package/flow.css
+package/index.d.mts
+package/index.mjs
+package/LICENSE
+package/NOTICE
+package/package.json
+package/README.md
+package/testing.d.mts
+package/testing.mjs
+package.json in the tarball:
+{
+  "bugs": "https://github.com/tsukuri-labs/foldkit-flow/issues",
+  "description": "A node-based graph UI for Foldkit, built on @xyflow/system.",
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "default": "./index.mjs"
+    },
+    "./flow.css": {
+      "default": "./flow.css"
+    },
+    "./testing": {
+      "types": "./testing.d.mts",
+      "default": "./testing.mjs"
+    }
+  },
+  "homepage": "https://tsukuri.dev",
+  "license": "MIT",
+  "name": "@tsukuri/flow",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "directory": "packages/flow",
+    "type": "git",
+    "url": "git+https://github.com/tsukuri-labs/foldkit-flow.git"
+  },
+  "sideEffects": [
+    "./flow.css"
+  ],
+  "type": "module",
+  "version": "0.1.0-alpha.1",
+  "main": "./index.mjs",
+  "types": "./index.d.mts",
+  "dependencies": {
+    "@xyflow/system": "0.0.83",
+    "d3-selection": "3.0.0"
+  },
+  "peerDependencies": {
+    "effect": "~4.1.0",
+    "foldkit": "~0.170.0"
+  }
+}
