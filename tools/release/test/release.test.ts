@@ -14,6 +14,7 @@ import { z } from "zod";
 
 import {
   consumerSource,
+  describePack,
   entryPoints,
   importFindings,
   ManifestSchema,
@@ -100,6 +101,12 @@ const ChangesetConfig = z.object({
 
 const Pre = z.object({ mode: z.string(), tag: z.string() });
 
+/** The version `bun.lock` records for a workspace package (the lock file is JSONC: read by pattern). */
+const lockedVersion = (text: string, name: string): string | undefined =>
+  new RegExp(`"name": "${name}",\\s*"version": "(?<version>[^"]+)"`, "u").exec(
+    text
+  )?.groups?.version;
+
 describe("which packages are published", () => {
   test("@tsukuri/flow only; the example and the tools stay private", () => {
     expect(publishedNames).toStrictEqual(["@tsukuri/flow"]);
@@ -118,6 +125,27 @@ describe("which packages are published", () => {
     expect(config.fixed.map((group) => [...group].toSorted())).toStrictEqual([
       publishedNames,
     ]);
+  });
+
+  test("bun.lock records the version of each published workspace package, so a plain `bun install` makes no diff after a version commit", () => {
+    const lock = readText("bun.lock");
+
+    for (const entry of published) {
+      expect(
+        lockedVersion(lock, entry.manifest.name),
+        entry.manifest.name
+      ).toBe(entry.manifest.version);
+      // Control: a lock written before the version commit records another version, and the same check fails it.
+      expect(
+        lockedVersion(
+          lock.replace(
+            `"version": "${entry.manifest.version}"`,
+            '"version": "0.0.0"'
+          ),
+          entry.manifest.name
+        )
+      ).not.toBe(entry.manifest.version);
+    }
   });
 
   test("the pre mode is alpha: the file is committed, so a dispatch before the version commit still tags alpha", () => {
@@ -347,8 +375,24 @@ describe("the manifest that ships", () => {
 });
 
 const listing = (...files: readonly string[]) => [
-  { files: files.map((file) => ({ path: file })) },
+  {
+    files: files.map((file, index) => ({ path: file, size: 10 * (index + 1) })),
+    size: 7,
+    unpackedSize: 99,
+  },
 ];
+
+describe("the size of what ships, read from a script", () => {
+  test("describePack names the file count, the packed and unpacked bytes, and each file with its size", () => {
+    expect(
+      describePack("@probe/probe", listing("index.mjs", "LICENSE"))
+    ).toStrictEqual([
+      "@probe/probe: 2 files, 7 bytes packed, 99 unpacked",
+      "       10 index.mjs",
+      "       20 LICENSE",
+    ]);
+  });
+});
 
 describe("what a tarball may hold", () => {
   test("built output, the stylesheet, the manifest and the documents only", () => {

@@ -311,12 +311,28 @@ export const consumerSource = (manifest: ShippedManifest): string =>
 const allowedFile =
   /^(?:[^/]+\.mjs|[^/]+\.d\.mts|[^/]+\.css|package\.json|README\.md|CHANGELOG\.md|LICENSE|NOTICE)$/u;
 
-/** The `npm pack --dry-run --json` listing. */
+/** The `npm pack --dry-run --json` listing: each file with its size, and the packed and unpacked size of the tarball. */
 export const PackListingSchema = z.array(
-  z.object({ files: z.array(z.object({ path: text })) })
+  z.object({
+    files: z.array(z.object({ path: text, size: z.number() })),
+    size: z.number(),
+    unpackedSize: z.number(),
+  })
 );
 
 export type PackListing = z.infer<typeof PackListingSchema>;
+
+/** The listing as text, one line per file and a total line, so the size of what ships is read from a script. */
+export const describePack = (
+  name: string,
+  listing: PackListing
+): readonly string[] =>
+  listing.flatMap((pack) => [
+    `${name}: ${pack.files.length} files, ${pack.size} bytes packed, ${pack.unpackedSize} unpacked`,
+    ...pack.files.map(
+      (file) => `  ${String(file.size).padStart(7)} ${file.path}`
+    ),
+  ]);
 
 /** The files of a tarball that are not built output. */
 export const strayFiles = (listing: PackListing): readonly string[] =>
