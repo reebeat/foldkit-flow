@@ -720,6 +720,17 @@ describe("the publish step", () => {
     expect(published(log)).toStrictEqual([]);
   });
 
+  test("an error that merely mentions E404 is not the E404 error code: nothing is published (control)", () => {
+    const { exitCode, log } = runPublish({
+      existing: [],
+      pre: alpha,
+      viewError: "npm error 503 proxy said: upstream returned E404 in a body",
+    });
+
+    expect(exitCode).not.toBe(0);
+    expect(published(log)).toStrictEqual([]);
+  });
+
   test("a refused name (E403) stops the set, and a re-run skips what was published and publishes the rest", () => {
     const first = runPublish({
       existing: [],

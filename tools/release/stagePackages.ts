@@ -172,7 +172,7 @@ const builtFiles = (dist: string): readonly BuiltFile[] =>
     .filter((name) => name.endsWith(".mjs") || name.endsWith(".d.mts"))
     .map((name) => ({ name, text: readText(path.join(dist, name)) }));
 
-const relativeImport = /\bfrom\s*"(?<target>\.[^"]+)"/gu;
+const relativeImport = /\b(?:from|import)\s*"(?<target>\.[^"]+)"/gu;
 
 /**
  * The sources the bundler reads: the entries and what they import by relative path (test files are not among them). An

@@ -416,6 +416,27 @@ describe("what a built file may import", () => {
     ).toStrictEqual([]);
   });
 
+  test('reads a side-effect import: an undeclared package or a development dependency named in `import "x"` fails (controls)', () => {
+    expect(
+      importFindings(
+        manifest,
+        built(
+          "index.mjs",
+          'import "left-pad";\nimport "@types/node";\nimport "./chunk-1.mjs";'
+        )
+      )
+    ).toStrictEqual([
+      "@probe/probe: index.mjs imports left-pad, which is not in dependencies or peerDependencies",
+      "@probe/probe: index.mjs imports @types/node, which is not in dependencies or peerDependencies",
+    ]);
+    expect(
+      importFindings(
+        manifest,
+        built("index.mjs", 'import "zod";\nimport "peerlib/sub";')
+      )
+    ).toStrictEqual([]);
+  });
+
   test("fails a bare import that is not a dependency or a peer (control)", () => {
     expect(
       importFindings(

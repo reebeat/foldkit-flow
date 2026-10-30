@@ -358,7 +358,7 @@ export interface BuiltFile {
 }
 
 const importSpecifier =
-  /\b(?:from|import\(|declare\s+module)\s*["'](?<specifier>[^"']+)["']/gu;
+  /\b(?:from|import\(|import|declare\s+module)\s*["'](?<specifier>[^"']+)["']/gu;
 
 /** The package a bare import specifier names (`@scope/name/sub` is `@scope/name`); relative and `node:` imports are none. */
 const packageOf = (specifier: string): string | undefined => {
