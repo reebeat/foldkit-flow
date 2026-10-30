@@ -44,3 +44,15 @@ A fresh project with `npm i @tsukuri/flow@alpha foldkit@0.170.0 effect@4.1.0 @ef
 ## 5. `changeset version` on this configuration
 
 In a scratch directory outside the repository (a copy of the root `package.json`, `bun.lock`, `.changeset/config.json`, `.changeset/pre.json` and `packages/flow/package.json`, plus one changeset file `"@tsukuri/flow": minor`), `changeset version` printed the pre-release notice and wrote `"version": "0.1.0-alpha.0"` and a `packages/flow/CHANGELOG.md` (`## 0.1.0-alpha.0`, `### Minor Changes`, `- The first alpha.`); `.changeset/pre.json` stayed `{ "mode": "pre", "tag": "alpha" }`. Without `bun.lock` in the scratch directory the tool did not find the workspace package (`"@tsukuri/flow" does not match any package`): the workspace discovery needs the lock file, which the repository has. This is the next PR's command; nothing was versioned in the repository.
+
+## 6. The browser journey on the head (`~/.local/state/foldkit-flow-verify/0005/journey/run-{1,2,3}.log`)
+
+`bun run build && bun run journey` on `ed6b9cb` (the example's build is the one `ready` made; nothing under `packages/flow/src`, `apps/example` or `tools/journey` differs from `main`). Host admission passed in every run (load average 10.70, 7.12, 5.88 before; the limit is 16). The head's J9 timing is judged by the median of its **first 3 admitted runs**, all logged (spec 0002, Revisions of round 2):
+
+| Run | Exit | J1 to J6, J0, J9 memoisation | J9 per-run p95 scripting (three drags) | Gate value (median of the three) |
+| --- | --- | --- | --- | --- |
+| 1 | 0 | all PASS | 4.45, 3.46, 3.59 ms | 3.59 ms |
+| 2 | 0 | all PASS | 4.62, 3.09, 7.42 ms | 4.62 ms |
+| 3 | 1 | all PASS except the J9 timing | 5.79, 9.50, 14.18 ms | 9.50 ms |
+
+**The median of the three gate values is 4.62 ms, under the 8 ms line: J9's timing holds for this head by the declared rule.** Run 3 failed on its own gate value (9.50 ms; p50 scripting per move 3.16 ms against 2.65 and 2.78 in runs 1 and 2). The cause was not isolated: the host's runnable-task count was 14 when the run was launched and 7 when the journey read it (load average 5.88 before, under the admission limit), but no per-process attribution was taken. It is logged, not discarded, and the rule does not ask a head to pass every run. The memoisation check (2 nodes and 2 edges mutated of 500 and 700 by a drag, 0 by ten wheel steps) passed in all three.
