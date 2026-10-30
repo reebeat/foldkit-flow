@@ -42,7 +42,7 @@
     },
     "packages/flow": {
       "name": "@tsukuri/flow",
-      "version": "0.1.0-alpha.1",
+      "version": "0.1.0-alpha.2",
       "dependencies": {
         "@xyflow/system": "0.0.83",
         "d3-selection": "3.0.0",
