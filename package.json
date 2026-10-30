@@ -2,6 +2,8 @@
   "name": "foldkit-flow-workspace",
   "version": "0.0.0",
   "private": true,
+  "bugs": "https://github.com/tsukuri-labs/foldkit-flow/issues",
+  "license": "MIT",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -10,7 +12,7 @@
   "type": "module",
   "scripts": {
     "prepare": "vp config --no-agent && effect-tsgo patch --typescript --oxlint",
-    "ready": "bun run check && bun run check:exceptions && bun run test && bun run build && bun run knip && bun run cpd && bun run secrets",
+    "ready": "bun run check && bun run check:exceptions && bun run test && bun run build && bun run release:stage && bun run knip && bun run cpd && bun run secrets",
     "check": "vp check",
     "test": "vp run -r --no-cache test",
     "build": "vp run -r --no-cache build",
@@ -19,9 +21,13 @@
     "knip": "knip",
     "cpd": "jscpd --config .jscpd.json .",
     "secrets": "gitleaks git --config .gitleaks.toml --redact",
-    "commitlint": "commitlint"
+    "commitlint": "commitlint",
+    "changeset": "changeset",
+    "release:version": "changeset version",
+    "release:stage": "bun tools/release/stagePackages.ts"
   },
   "devDependencies": {
+    "@changesets/cli": "3.0.3",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@effect/tsgo": "catalog:",
