@@ -28,6 +28,7 @@ import path from "node:path";
 import { consumerFindings } from "./consumer.ts";
 import {
   assetFiles,
+  describePack,
   entryPoints,
   importFindings,
   ManifestSchema,
@@ -37,7 +38,12 @@ import {
   RootSchema,
   strayFiles,
 } from "./release.ts";
-import type { BuiltFile, PackageEntry, ShippedManifest } from "./release.ts";
+import type {
+  BuiltFile,
+  PackageEntry,
+  PackListing,
+  ShippedManifest,
+} from "./release.ts";
 
 const root = path.resolve(import.meta.dirname, "../..");
 
@@ -107,17 +113,15 @@ const stage = (entry: PackageEntry, manifest: ShippedManifest): void => {
   }
 };
 
-/** The files `npm pack` would put in the tarball of `dist`, taken from a copy outside the repository. */
-const tarballFiles = (dist: string): readonly string[] => {
+/** The `npm pack --dry-run --json` listing of `dist`, taken from a copy outside the repository. */
+const packListing = (dist: string): PackListing => {
   const scratch = mkdtempSync(path.join(tmpdir(), "foldkit-flow-pack-"));
 
   try {
     cpSync(dist, scratch, { recursive: true });
 
-    return strayFiles(
-      PackListingSchema.parse(
-        JSON.parse(run("npm", ["pack", "--dry-run", "--json"], scratch))
-      )
+    return PackListingSchema.parse(
+      JSON.parse(run("npm", ["pack", "--dry-run", "--json"], scratch))
     );
   } finally {
     rmSync(scratch, { force: true, recursive: true });
@@ -204,7 +208,7 @@ const sourceFiles = (
 };
 
 const findings = staged.flatMap(({ entry, result }) => [
-  ...tarballFiles(path.join(root, entry.dir, "dist")).map(
+  ...strayFiles(packListing(path.join(root, entry.dir, "dist"))).map(
     (file) =>
       `${entry.manifest.name}: ${file} would ship and is not built output`
   ),
@@ -226,6 +230,17 @@ if (findings.length > 0) {
   process.stderr.write(`${findings.join("\n")}\n`);
   process.exit(1);
 }
+
+process.stdout.write(
+  `${staged
+    .flatMap(({ entry }) =>
+      describePack(
+        entry.manifest.name,
+        packListing(path.join(root, entry.dir, "dist"))
+      )
+    )
+    .join("\n")}\n`
+);
 
 process.stdout.write(
   `Staged ${published.map((entry) => entry.manifest.name).join(", ")}.\n`
