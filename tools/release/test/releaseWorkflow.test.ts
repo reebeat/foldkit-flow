@@ -99,7 +99,7 @@ const readRepositoryFile = (name: string): string =>
   readFileSync(path.join(repoRoot, name), "utf-8");
 
 const tokenAuth =
-  /NPM_TOKEN|NODE_AUTH_TOKEN|_auth|_password|npm_config_.*token|secrets.(?!GITHUB_TOKEN)[A-Za-z_][A-Za-z0-9_]*/iu;
+  /NPM_TOKEN|NODE_AUTH_TOKEN|_auth|_password|npm_config_.*token|secrets[.](?!GITHUB_TOKEN(?:[^A-Za-z0-9_]|$))[A-Za-z_][A-Za-z0-9_]*/iu;
 
 describe("token-free publishing", () => {
   test("catches credential references and npm auth configuration", () => {
