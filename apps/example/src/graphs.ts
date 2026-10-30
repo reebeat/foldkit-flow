@@ -1,5 +1,5 @@
+import type { FlowEdge, FlowNode, HandleDef } from "@tsukuri/flow";
 import { Array } from "effect";
-import type { FlowEdge, FlowNode, HandleDef } from "foldkit-flow";
 
 // The three graphs of the example, as pure data. Layout is the application's job: positions here are written by hand
 // (and, for the large graph, computed from the index); an ELK.js layout would produce the same kind of data.

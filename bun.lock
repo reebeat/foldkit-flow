@@ -27,7 +27,7 @@
         "@effect/platform-browser": "catalog:",
         "effect": "catalog:",
         "foldkit": "catalog:",
-        "foldkit-flow": "workspace:*",
+        "@tsukuri/flow": "workspace:*",
       },
       "devDependencies": {
         "@effect/vitest": "catalog:",
@@ -40,7 +40,7 @@
       },
     },
     "packages/flow": {
-      "name": "foldkit-flow",
+      "name": "@tsukuri/flow",
       "version": "0.0.0",
       "dependencies": {
         "@types/d3-selection": "3.0.11",
@@ -726,7 +726,7 @@
 
     "foldkit": ["foldkit@0.170.0", "", { "dependencies": { "parse5": "^8.0.1" }, "peerDependencies": { "@effect/platform-browser": "~4.1.0", "effect": "~4.1.0" } }, "sha512-H/MRQe/IZ/LqpgPi+Zy1S1OXQ8o12e2S/6U+phQu3WmoHSm7Vase/dEnOvrq9YZfqxK44/oVq6wE9oqXzEIaig=="],
 
-    "foldkit-flow": ["foldkit-flow@workspace:packages/flow"],
+    "@tsukuri/flow": ["@tsukuri/flow@workspace:packages/flow"],
 
     "formatly": ["formatly@0.11.4", "", { "dependencies": { "fd-package-json": "^2.0.0", "package-manager-detector": "^1.8.0" }, "bin": { "formatly": "bin/index.mjs" } }, "sha512-TeCC10lP8KCgoX+Fe5lryILIT0/Dy+nP0OSVnsuB5CwXoLuOdqxCYlPFF1inR8S/zTy1ec7TjhS2TeRKWzzImA=="],
 

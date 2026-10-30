@@ -1,4 +1,4 @@
-// Copied from reebeat/studio @ b26c1cc (main; apps/editor/vite.config.ts), which generated it
+// Copied from tsukuri-labs/studio @ b26c1cc (main; apps/editor/vite.config.ts), which generated it
 // with `create-foldkit-app` 0.40.0 (counter example) and moved it onto Vite+: `defineConfig` comes from `vite-plus` and
 // the Vitest options live in the `test` block (Vite+ bundles Vitest).
 // Deviation: `@foldkit/vite-plugin` 0.29.0 is on (Model preservation across reloads, dev tools); studio's copy leaves it

@@ -1,5 +1,5 @@
 {
-  "name": "foldkit-flow",
+  "name": "@tsukuri/flow",
   "version": "0.0.0",
   "private": true,
   "description": "A node-based graph UI for Foldkit, built on @xyflow/system.",

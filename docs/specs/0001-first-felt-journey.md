@@ -1,6 +1,6 @@
 # Spec 0001: the first felt journey (pan, zoom, drag, connect, box select)
 
-Status: **spec** (frozen when its PR opens). Date: 2026-10-29. Decided by: the operator's assignment of 2026-10-29 (a node-based graph UI for Foldkit, a generic library over `@xyflow/system`, MIT, no reebeat product logic; the performance budget and the public API list below).
+Status: **spec** (frozen when its PR opens). Date: 2026-10-29. Decided by: the operator's assignment of 2026-10-29 (a node-based graph UI for Foldkit, a generic library over `@xyflow/system`, MIT, no tsukuri product logic; the performance budget and the public API list below).
 Binding for: `packages/flow` and `apps/example`. Stacked on [spec 0000](0000-development-lifecycle.md) (PR 1).
 
 ## Goal
@@ -70,7 +70,7 @@ tools/journey    probe.ts (runs in the page), journey.ts (the steps), stats.ts (
 
 | Part | Content |
 |---|---|
-| `packages/flow` | the modules above; exports `defineFlow`, `init`, `Model`, `Message`, `OutMessage`, `addEdge`, `reconnectEdge`, the node and edge Schemas, `Attribution`; `foldkit-flow/testing` (`eventually`, for tests that boot a runtime) |
+| `packages/flow` | the modules above; exports `defineFlow`, `init`, `Model`, `Message`, `OutMessage`, `addEdge`, `reconnectEdge`, the node and edge Schemas, `Attribution`; `@tsukuri/flow/testing` (`eventually`, for tests that boot a runtime) |
 | `apps/example` | the three graphs, the graph toggle, an event log of out-messages; the app embeds the Flow Submodel and handles `Connected`, `Reconnected`, `Deleted` |
 | `tools/journey` | the browser gate: `bun run journey` drives the built example in headless Chromium through the journey and the performance measurement; evidence under `~/.local/state/foldkit-flow-verify/` |
 

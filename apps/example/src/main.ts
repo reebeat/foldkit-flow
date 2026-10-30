@@ -1,7 +1,7 @@
+import * as Flow from "@tsukuri/flow";
 import { Array, Match, Option, Schema } from "effect";
 import { Update } from "foldkit";
 import type { Runtime } from "foldkit";
-import * as Flow from "foldkit-flow";
 import { createKeyedLazy } from "foldkit/html";
 import type { Document, Html, HtmlBuilder } from "foldkit/html";
 import { defineMessageUnion } from "foldkit/message";

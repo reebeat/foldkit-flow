@@ -3,13 +3,13 @@ name: pr-create
 description: "Open a foldkit-flow pull request: the PR body is the report, in eight fixed sections, and the PR opens only when the whole journey is built and `bun run ready` passed on the head. Use when a spec's code is finished and a PR is to be opened, or when drafting a PR body for this repository."
 ---
 
-<!-- Provenance: copied from reebeat/studio @ b26c1cc (.agents/skills/pr-create/SKILL.md), which copied it from reebeat/reebeat
+<!-- Provenance: copied from tsukuri-labs/studio @ b26c1cc (.agents/skills/pr-create/SKILL.md), which copied it from tsukuri-labs/tsukuri
      @ f7c348877585f54b6bf00651608726dd7e5044d3 (.agents/skills/pr-create/SKILL.md).
-     Deviations: the description names this repository; the sentence that pointed at reebeat's glossary is dropped
+     Deviations: the description names this repository; the sentence that pointed at tsukuri's glossary is dropped
      (this repository has no glossary; see PROVENANCE.md).
      Credits: builds on the machine skill `pr` (`skill://pr`), whose Summary, Evidence
      and Merge Danger sections it reuses; the Summary's menu of visuals comes from Dex Horthy's `show-me` skill
-     (https://github.com/humanlayer/skills/blob/main/plugins/show-me/skills/show-me/SKILL.md). New in reebeat: the eight
+     (https://github.com/humanlayer/skills/blob/main/plugins/show-me/skills/show-me/SKILL.md). New in tsukuri: the eight
      sections and their order, the opening rule, and the `gh` command (spec 0000, "The PR body is the report"). -->
 
 # Open a pull request

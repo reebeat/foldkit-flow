@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "foldkit-flow/flow.css";
+@import "@tsukuri/flow/flow.css";
 
 .state-title,
 .scene-title {

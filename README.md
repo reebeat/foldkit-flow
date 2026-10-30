@@ -24,7 +24,7 @@ The example has three graphs: *Small* (five states and three edge kinds: pan and
 The Flow is a Foldkit Submodel: its Model, Message and `update` are pure, the graph lives in the application's Model, and the xyflow controllers run in Mounts that dispatch Messages.
 
 ```ts
-import * as Flow from "foldkit-flow";
+import * as Flow from "@tsukuri/flow";
 
 // 1. The rules that are code (not Model) are declared once.
 const flow = Flow.defineFlow({
@@ -89,7 +89,7 @@ foldkit-flow stands on [`@xyflow/system`](https://github.com/xyflow/xyflow/tree/
 
 - [`AGENTS.md`](AGENTS.md): the process, the gate table, the Effect and Foldkit rules.
 - [`docs/specs/`](docs/specs/): one spec per felt journey; [`STATE.md`](STATE.md) says which is active.
-- [`PROVENANCE.md`](PROVENANCE.md): what was copied from reebeat studio, at which commit, with which deviations.
+- [`PROVENANCE.md`](PROVENANCE.md): what was copied from tsukuri studio, at which commit, with which deviations.
 
 ## Licence
 

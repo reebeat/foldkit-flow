@@ -1,8 +1,8 @@
 # foldkit-flow
 
-A node-based graph UI for Foldkit: pan and zoom a canvas, drag nodes, connect handles, select with a box. It is a generic library (`packages/flow`, published as `foldkit-flow`) with no product logic, and an example app (`apps/example`) that is its first user. Read [`README.md`](README.md); [`STATE.md`](STATE.md) says which spec is active. This repository is **public** and MIT licensed: no secret, no personal data, ever.
+A node-based graph UI for Foldkit: pan and zoom a canvas, drag nodes, connect handles, select with a box. It is a generic library (`packages/flow`, published as `@tsukuri/flow`) with no product logic, and an example app (`apps/example`) that is its first user. Read [`README.md`](README.md); [`STATE.md`](STATE.md) says which spec is active. This repository is **public** and MIT licensed: no secret, no personal data, ever.
 
-The lifecycle below is specified in [`docs/specs/0000-development-lifecycle.md`](docs/specs/0000-development-lifecycle.md). This file links facts that live in scripts or in the spec; it does not copy them. It was copied from reebeat studio's `AGENTS.md` and adapted (see [`PROVENANCE.md`](PROVENANCE.md)).
+The lifecycle below is specified in [`docs/specs/0000-development-lifecycle.md`](docs/specs/0000-development-lifecycle.md). This file links facts that live in scripts or in the spec; it does not copy them. It was copied from tsukuri studio's `AGENTS.md` and adapted (see [`PROVENANCE.md`](PROVENANCE.md)).
 
 ## How a change travels
 
@@ -22,7 +22,7 @@ spec → code → PR   (1:1)
 
 ```text
 apps/example      the Foldkit app that exercises the library; depends on packages/flow
-packages/flow     foldkit-flow: Submodels, views, Mounts; peers: effect, foldkit; depends on @xyflow/system
+packages/flow     @tsukuri/flow: Submodels, views, Mounts; peers: effect, foldkit; depends on @xyflow/system
 tools/quality     repository checks (exception registry, Effect family, published Effect range, Foldkit lint adapter)
 tools/journey     the browser gate: drives the built example in headless Chromium (puppeteer-core), measures the budget
 tools/oxlint      vendored Oxlint rules
@@ -79,7 +79,7 @@ Every agent that writes TypeScript here writes native Effect (v4, pinned in the 
 Branch protection includes administrators. To remove it (operator only, an external effect):
 
 ```sh
-gh api -X DELETE repos/reebeat/foldkit-flow/branches/main/protection
+gh api -X DELETE repos/tsukuri-labs/foldkit-flow/branches/main/protection
 ```
 
 Restore it afterwards as spec 0000 describes it.

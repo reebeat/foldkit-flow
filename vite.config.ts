@@ -1,6 +1,6 @@
-// Provenance: adapted from reebeat/reebeat @ f7c348877585f54b6bf00651608726dd7e5044d3 (vite.config.ts), which adapted it from
+// Provenance: adapted from tsukuri-labs/tsukuri @ f7c348877585f54b6bf00651608726dd7e5044d3 (vite.config.ts), which adapted it from
 // phibkro/vektorprogrammet-reimagined @ 797e9e41d96194b9479ff224ac1c40bbc0545888. Deviations: the Effect groups and the
-// per-file overrides of reebeat's packages are replaced by this repository's own (apps/example, packages/flow,
+// per-file overrides of tsukuri's packages are replaced by this repository's own (apps/example, packages/flow,
 // tools/quality), and the Foldkit Oxlint plugin rules apply to apps/example and packages/flow. See PROVENANCE.md.
 import { effectNative, strict } from "@effect/tsgo/oxlint-presets";
 import foldkitRecommended from "@foldkit/oxlint-plugin/recommended.json" with { type: "json" };
