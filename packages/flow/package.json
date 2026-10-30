@@ -3,7 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "description": "A node-based graph UI for Foldkit, built on @xyflow/system.",
+  "homepage": "https://tsukuri.dev",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsukuri-labs/foldkit-flow.git",
+    "directory": "packages/flow"
+  },
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
