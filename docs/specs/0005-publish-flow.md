@@ -145,6 +145,8 @@ Order matters: npm's rule is that a new trusted-publisher configuration must com
 
 ## Revisions
 
+- **2026-10-30, token removal:** spec [0008](0008-trusted-publishing.md) supersedes the token path and removal order above after successful trusted publishing; it retains the token-free dry-run check.
+
 - **2026-10-30, plan written** with the build.
 - **2026-10-30, found while building.**
   1. **The first reading of the licence state was stale.** GitHub reports `MIT` for the repository today (section 3); no `LICENSE` change was needed. The test and the `PROVENANCE.md` section make the text and the claim checkable.
