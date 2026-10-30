@@ -1,0 +1,5 @@
+# control: packages/flow/package.json without homepage and repository
+[05:32:57.474] ERROR (#2): [Error [SchemaError]: Missing key
+  _tag: 'SchemaError',
+  '~effect/Schema/SchemaError': '~effect/Schema/SchemaError',
+restored:       Tests  1 passed (1)
