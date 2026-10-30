@@ -1,0 +1,10 @@
+@tsukuri/flow@0.0.0 files=9 size=24714 unpacked=100470
+   1075 LICENSE
+   2124 NOTICE
+   2493 README.md
+   2946 flow.css
+  29640 index.d.mts
+  60157 index.mjs
+    973 package.json
+    502 testing.d.mts
+    560 testing.mjs

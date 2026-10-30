@@ -1,0 +1,4 @@
+@tsukuri/flow: index.mjs imports url, which is not in dependencies or peerDependencies
+...
+@tsukuri/flow: src/selection.ts imports happy-dom, which is not in dependencies or peerDependencies
+stage exit=1; line 1 of src/selection.ts: import "happy-dom"; (reverted afterwards)

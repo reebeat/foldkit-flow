@@ -1,5 +1,5 @@
-// The metadata that a published `@tsukuri/flow` carries about where it lives (spec 0004). The package is private until the
-// operator publishes it; its manifest already says where the code and the product are, so the first publish needs no edit.
+// The metadata that a published `@tsukuri/flow` carries about where it lives (spec 0004). The release path (spec 0005)
+// publishes it from `dist`, with these fields taken from this manifest: the first publish needs no edit.
 import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, FileSystem, Path, Schema } from "effect";

@@ -16,6 +16,10 @@
       "entry": ["checkEffectExceptions.ts"],
       "project": ["*.ts", "test/**/*.ts"]
     },
+    "tools/release": {
+      "entry": ["stagePackages.ts"],
+      "project": ["*.ts", "test/**/*.ts"]
+    },
     "tools/journey": {
       "project": ["*.ts"]
     }

@@ -1,0 +1,11 @@
+$ bun tools/release/stagePackages.ts
+warn: TypeScript 7.0 does not yet have a stable API and is experimental. Some options will be unavailable.
+@tsukuri/flow: index.mjs imports foldkit, which is not in dependencies or peerDependencies
+@tsukuri/flow: src/view.ts imports foldkit, which is not in dependencies or peerDependencies
+@tsukuri/flow: src/update.ts imports foldkit, which is not in dependencies or peerDependencies
+@tsukuri/flow: src/types.ts imports foldkit, which is not in dependencies or peerDependencies
+@tsukuri/flow: src/attribution.ts imports foldkit, which is not in dependencies or peerDependencies
+@tsukuri/flow: src/message.ts imports foldkit, which is not in dependencies or peerDependencies
+@tsukuri/flow: src/snapshot.ts imports foldkit, which is not in dependencies or peerDependencies
+@tsukuri/flow: src/mounts.ts imports foldkit, which is not in dependencies or peerDependencies
+error: script "release:stage" exited with code 1

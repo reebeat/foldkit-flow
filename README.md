@@ -2,7 +2,7 @@
 
 A node-based graph UI for [Foldkit](https://foldkit.dev): pan and zoom a canvas, drag nodes, connect handles, select with a box. It does for Foldkit what React Flow and Svelte Flow do for their frameworks.
 
-Status: **first journey built** (spec 0001), not published yet. The Flow Submodel, its view and the Mounts that own the xyflow controllers are in `packages/flow`; `apps/example` is the first user.
+Status: **first journey built** (spec 0001); **the release path is built** (spec 0005) and nothing is published yet. The Flow Submodel, its view and the Mounts that own the xyflow controllers are in `packages/flow`; `apps/example` is the first user. Once the operator publishes, `npm i @tsukuri/flow@alpha` installs the pre-release (`0.1.0-alpha.N`, dist-tag `alpha`); the package README (`packages/flow/README.md`) is the one npm shows.
 
 foldkit-flow is a generic library with no product logic. Layout is the application's job: an ELK.js example is planned, and ELK stays out of the library.
 
@@ -89,11 +89,11 @@ foldkit-flow stands on [`@xyflow/system`](https://github.com/xyflow/xyflow/tree/
 
 - [`AGENTS.md`](AGENTS.md): the process, the gate table, the Effect and Foldkit rules.
 - [`docs/specs/`](docs/specs/): one spec per felt journey; [`STATE.md`](STATE.md) says which is active.
-- [`PROVENANCE.md`](PROVENANCE.md): what was copied from tsukuri studio, at which commit, with which deviations.
+- [`PROVENANCE.md`](PROVENANCE.md): what was copied from other repositories, at which commit, under which licence, and what the npm package contains.
 
 ## Licence
 
-MIT. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+MIT. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). The package contains only this project's own code and its attributions; files copied from Apache-2.0 repositories keep that licence and stay in the repository ([`LICENSES/Apache-2.0.txt`](LICENSES/Apache-2.0.txt), [`PROVENANCE.md`](PROVENANCE.md)).
 
 ## Contributing
 

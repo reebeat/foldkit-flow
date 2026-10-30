@@ -130,6 +130,22 @@ export default defineConfig({
     overrides: [
       ...effectConfigResult.overrides,
       {
+        // The release tooling (spec 0005) is plain TypeScript with zod, yaml and smol-toml, copied from phibkro/pg-txmode,
+        // whose release tooling does not use Effect. It is repository tooling that npm never sees, and it runs as Node
+        // scripts and tests: node:fs, node:child_process and process.env are its job. The Effect-first rules that
+        // contradict that (native Array, String and Object methods, Node built-ins) are off for these files only;
+        // `no-template-curly-in-string` fires on the `${NODE_AUTH_TOKEN}` text of the workflow fixtures.
+        files: ["tools/release/**"],
+        rules: {
+          "effecttsgo/node-builtin-import": "off",
+          "effecttsgo/prefer-effect-array": "off",
+          "effecttsgo/prefer-effect-record": "off",
+          "effecttsgo/prefer-effect-string": "off",
+          "effecttsgo/process-env": "off",
+          "eslint/no-template-curly-in-string": "off",
+        },
+      },
+      {
         // unicorn/throw-new-error treats Schema.TaggedError class definitions as throw sites; they contain no throw.
         files: [
           "tools/quality/effectExceptions.ts",

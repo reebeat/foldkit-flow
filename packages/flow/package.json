@@ -1,7 +1,6 @@
 {
   "name": "@tsukuri/flow",
   "version": "0.0.0",
-  "private": true,
   "description": "A node-based graph UI for Foldkit, built on @xyflow/system.",
   "homepage": "https://tsukuri.dev",
   "license": "MIT",
@@ -16,17 +15,22 @@
     "./flow.css": "./src/flow.css",
     "./testing": "./src/testing.ts"
   },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
   "scripts": {
+    "prepublishOnly": "echo 'publish packages/flow/dist (bun run release:stage), not the source directory' && exit 1",
     "test": "vp test run"
   },
   "dependencies": {
-    "@types/d3-selection": "3.0.11",
     "@xyflow/system": "0.0.83",
     "d3-selection": "3.0.0"
   },
   "devDependencies": {
     "@effect/platform-browser": "catalog:",
     "@effect/vitest": "catalog:",
+    "@types/d3-selection": "3.0.11",
     "effect": "catalog:",
     "foldkit": "catalog:",
     "happy-dom": "catalog:",
