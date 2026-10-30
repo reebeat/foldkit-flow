@@ -1,6 +1,6 @@
 {
   "name": "@tsukuri/flow",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "A node-based graph UI for Foldkit, built on @xyflow/system.",
   "homepage": "https://tsukuri.dev",
   "license": "MIT",
