@@ -18,7 +18,7 @@ export interface WorkflowFile {
 }
 
 /** Either a value or the sentence that says why there is none. */
-export type Outcome<T> =
+type Outcome<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly problem: string };
 
