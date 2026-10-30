@@ -1,25 +1,23 @@
-// The release workflow rules (spec 0005): where the npm token comes from and goes, that `secretspec.toml` and the
-// workflow name the same secret, that the `check` mode cannot publish, and that the release hold stops a publish. Each
+// The release workflow rules (specs 0005 and 0008): no token authentication, check cannot publish,
+// and the release hold stops a publish. Each
 // rule has a control that breaks it in a fixture, and each runs on the real files.
 // Copied from phibkro/pg-txmode (Apache-2.0, Copyright 2026 Philip Bjørknes Krogh)
 // `tools/quality/test/releaseWorkflow.test.ts` at 23be53c0c66a129540350697253b5c19abde3171, which ported it from
 // tsukuri-labs/tsukuri spec 0009 (PR #29, merge commit d0c5a1de330200302edbad58784f351b09eeb4f8). Deviation: the
 // fixture packages are `@probe/*` (the publish step is generic over `packages/*/dist`). This file remains Apache-2.0
 // under its header: see PROVENANCE.md and LICENSES/.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, test } from "vite-plus/test";
+import { parseDocument } from "yaml";
 
 import {
-  declaredSecrets,
   evaluateCondition,
   holdFindings,
   holdScript,
   modeFindings,
-  referencedSecrets,
   stepScript,
-  tokenFindings,
 } from "../releaseWorkflow.ts";
 import type { WorkflowFile } from "../releaseWorkflow.ts";
 import {
@@ -28,20 +26,6 @@ import {
   withScratch,
   writeFixture,
 } from "./scriptHarness.ts";
-
-/** A GitHub expression that reads the secret `name`. */
-const expression = (name: string): string => `\${{ secrets.${name} }}`;
-
-const secretspec = `[project]
-name = "probe"
-revision = "1.0"
-
-[profiles.default]
-NPM_TOKEN = { description = "token", required = true }
-
-[profiles.default.defaults]
-required = true
-`;
 
 const checkCondition =
   "inputs.mode == 'check' && github.ref == 'refs/heads/main'";
@@ -63,8 +47,6 @@ interface Changes {
   readonly publishExtra?: string;
   readonly publishIf?: string;
   readonly publishRun?: string;
-  readonly secret?: string;
-  readonly variable?: string;
   readonly workflowEnv?: string;
 }
 
@@ -94,9 +76,7 @@ jobs:
 ${changes.needs ?? ""}
     steps:
       - name: Check
-        env:
-          ${changes.variable ?? "NODE_AUTH_TOKEN"}: ${expression(changes.secret ?? "NPM_TOKEN")}
-        run: ${changes.checkRun ?? "npm whoami"}
+        run: ${changes.checkRun ?? "npm publish ./dist --dry-run"}
 ${changes.checkSteps ?? ""}
   publish:
     if: ${changes.publishIf ?? publishCondition}
@@ -106,16 +86,9 @@ ${changes.jobEnv ?? ""}${changes.jobExtra ?? ""}
     steps:
       - uses: actions/checkout@abc
 ${changes.beforeHold ?? ""}${holdBlock(changes)}      - name: Publish
-${changes.publishExtra ?? ""}        env:
-          NODE_AUTH_TOKEN: ${expression("NPM_TOKEN")}
-        run: ${changes.publishRun ?? "bunx changeset publish"}
+${changes.publishExtra ?? ""}        run: ${changes.publishRun ?? "bunx changeset publish"}
 `,
 });
-
-/** A one-file workflow fixture. */
-const fixture = (text: string): readonly WorkflowFile[] => [
-  { name: "x.yml", text },
-];
 
 const mentions =
   (text: string) =>
@@ -125,183 +98,20 @@ const mentions =
 const readRepositoryFile = (name: string): string =>
   readFileSync(path.join(repoRoot, name), "utf-8");
 
-describe("the npm token", () => {
-  test("is declared once, read once, in the npm-release environment, as NODE_AUTH_TOKEN", () => {
-    expect(tokenFindings([release({})], secretspec)).toStrictEqual([]);
-    expect(
-      referencedSecrets(
-        `${expression("NPM_TOKEN")} ${expression("GITHUB_TOKEN")}`
-      )
-    ).toStrictEqual(["NPM_TOKEN"]);
-    expect(declaredSecrets(secretspec)).toStrictEqual({
-      ok: true,
-      value: ["NPM_TOKEN"],
-    });
-  });
+const tokenAuth = /NPM_TOKEN|NODE_AUTH_TOKEN|_authToken|npm_config_.*token/iu;
 
-  test("fails when secretspec.toml and the workflow name different secrets (control)", () => {
-    expect(
-      tokenFindings([release({ secret: "NPM_PUBLISH_TOKEN" })], secretspec)
-    ).toContain(
-      "release.yml references secret NPM_PUBLISH_TOKEN, which secretspec.toml does not declare"
-    );
-    expect(
-      tokenFindings(
-        [release({})],
-        secretspec.replace("NPM_TOKEN", "PUBLISH_TOKEN")
-      )
-    ).toContain(
-      "no workflow reads PUBLISH_TOKEN, which secretspec.toml declares"
-    );
-  });
-
-  test("fails a secretspec.toml that is not TOML or has no profile (controls)", () => {
-    expect(
-      mentions("not valid TOML")(tokenFindings([release({})], "NPM_TOKEN = ["))
-    ).toBe(true);
-    expect(
-      mentions("no [profiles.*] table")(
-        tokenFindings([release({})], '[project]\nname = "x"\n')
-      )
-    ).toBe(true);
-  });
-
-  test("fails a job that reads it outside the npm-release environment, so a repository secret could serve it (control)", () => {
-    expect(
-      mentions("outside the npm-release environment")(
-        tokenFindings([release({ environment: "staging" })], secretspec)
-      )
-    ).toBe(true);
-  });
-
-  test("fails when it is read at workflow level or job level, not in one step (controls)", () => {
-    expect(
-      mentions("at workflow level")(
-        tokenFindings(
-          [
-            release({
-              workflowEnv: `env:\n  NODE_AUTH_TOKEN: ${expression("NPM_TOKEN")}`,
-            }),
-          ],
-          secretspec
-        )
-      )
-    ).toBe(true);
-    expect(
-      mentions("at job level")(
-        tokenFindings(
-          [
-            release({
-              jobEnv: `    env:\n      NODE_AUTH_TOKEN: ${expression("NPM_TOKEN")}\n`,
-            }),
-          ],
-          secretspec
-        )
-      )
-    ).toBe(true);
-  });
-
-  test("fails when it is echoed, traced or written to a file (controls)", () => {
-    const printing = mentions("can print it");
-    const literal = mentions("literal npm credential");
-
-    expect(
-      printing(
-        tokenFindings(
-          [release({ checkRun: "echo $NODE_AUTH_TOKEN" })],
-          secretspec
-        )
-      )
-    ).toBe(true);
-    expect(
-      printing(tokenFindings([release({ checkRun: "printenv" })], secretspec))
-    ).toBe(true);
-    expect(
-      literal(
-        tokenFindings(
-          fixture(
-            "run: echo '//registry.npmjs.org/:_authToken=abc123' > .npmrc"
-          ),
-          secretspec
-        )
-      )
-    ).toBe(true);
-    expect(
-      literal(
-        tokenFindings(fixture(`token: npm_${"x".repeat(36)}`), secretspec)
-      )
-    ).toBe(true);
-    expect(
-      literal(
-        tokenFindings(
-          fixture(
-            `run: printf '%s' '//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}' > f`
-          ),
-          secretspec
-        )
-      )
-    ).toBe(false);
-  });
-
-  test("fails a second secret declaration, and a variable other than NODE_AUTH_TOKEN (controls)", () => {
-    expect(
-      mentions("exactly one secret")(
-        tokenFindings(
-          [release({})],
-          `${secretspec}\n[profiles.staging]\nOTHER = { description = "x" }\n`
-        )
-      )
-    ).toBe(true);
-    expect(
-      mentions("only NODE_AUTH_TOKEN")(
-        tokenFindings([release({ variable: "NPM_TOKEN" })], secretspec)
-      )
-    ).toBe(true);
-  });
-
-  test("fails a second step that reads the token in a job (control)", () => {
-    const second =
-      "      - name: Second\n        env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}\n        run: npm whoami\n";
-
-    expect(
-      mentions("reads the token in 2 steps")(
-        tokenFindings([release({ checkSteps: second })], secretspec)
-      )
-    ).toBe(true);
-    expect(tokenFindings([release({})], secretspec)).toStrictEqual([]);
-  });
-
-  test("fails the printers a slip would reach for, and passes ordinary shell (controls)", () => {
-    const printing = mentions("can print it");
-
-    for (const checkRun of [
-      "export -p",
-      "export",
-      "declare -x",
-      "declare -p",
-      "typeset -x",
-      "set",
-      "compgen -e",
-      "cat /proc/self/environ",
-      "node -e 'console.log(process.env)'",
-      "npm whoami && env",
-      "npm whoami; export -p | sort",
+describe("token-free publishing", () => {
+  test("catches credential references and npm auth configuration", () => {
+    for (const text of [
+      "secrets.NPM_TOKEN",
+      "NODE_AUTH_TOKEN",
+      "_authToken",
+      "npm_config_token",
     ]) {
-      expect(printing(tokenFindings([release({ checkRun })], secretspec))).toBe(
-        true
-      );
+      expect(tokenAuth.test(text)).toBe(true);
     }
 
-    for (const checkRun of [
-      "set -eu",
-      "export FOO=bar",
-      "npm whoami",
-      "devenv shell -- bash -c 'npm view x'",
-    ]) {
-      expect(printing(tokenFindings([release({ checkRun })], secretspec))).toBe(
-        false
-      );
-    }
+    expect(tokenAuth.test("id-token: write")).toBe(false);
   });
 });
 
@@ -441,21 +251,16 @@ describe("the release mode", () => {
 });
 
 describe("the real files", () => {
-  test("secretspec.toml and the workflows follow the token rule", () => {
-    const workflows: readonly WorkflowFile[] = [
-      {
-        name: "checks.yml",
-        text: readRepositoryFile(".github/workflows/checks.yml"),
-      },
-      {
-        name: "release.yml",
-        text: readRepositoryFile(".github/workflows/release.yml"),
-      },
-    ];
+  test("no workflow reads an npm token or configures token auth", () => {
+    for (const name of readdirSync(path.join(repoRoot, ".github/workflows"))) {
+      if (name.endsWith(".yml") || name.endsWith(".yaml")) {
+        expect(readRepositoryFile(`.github/workflows/${name}`)).not.toMatch(
+          tokenAuth
+        );
+      }
+    }
 
-    expect(
-      tokenFindings(workflows, readRepositoryFile("secretspec.toml"))
-    ).toStrictEqual([]);
+    expect(existsSync(path.join(repoRoot, "secretspec.toml"))).toBe(false);
   });
 
   test("the release workflow's check mode cannot reach a publish, for any mode or ref", () => {
@@ -470,8 +275,16 @@ describe("the real files", () => {
   test("the workflow keeps provenance: id-token write on the publisher and NPM_CONFIG_PROVENANCE", () => {
     const text = readRepositoryFile(".github/workflows/release.yml");
 
-    expect(text).toContain("id-token: write");
-    expect(text).toContain('NPM_CONFIG_PROVENANCE: "true"');
+    const workflow = parseDocument(text);
+    expect(workflow.getIn(["jobs", "publish", "permissions", "id-token"])).toBe(
+      "write"
+    );
+    expect(
+      workflow.getIn(["jobs", "publish", "env", "NPM_CONFIG_PROVENANCE"])
+    ).toBe("true");
+    expect(workflow.getIn(["jobs", "publish", "environment"])).toBe(
+      "npm-release"
+    );
   });
 
   test("the check job dry-runs each package and holds no publish", () => {

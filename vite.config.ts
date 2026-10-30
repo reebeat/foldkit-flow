@@ -130,11 +130,11 @@ export default defineConfig({
     overrides: [
       ...effectConfigResult.overrides,
       {
-        // The release tooling (spec 0005) is plain TypeScript with zod, yaml and smol-toml, copied from phibkro/pg-txmode,
+        // The release tooling (spec 0005) is plain TypeScript with zod and yaml, copied from phibkro/pg-txmode,
         // whose release tooling does not use Effect. It is repository tooling that npm never sees, and it runs as Node
         // scripts and tests: node:fs, node:child_process and process.env are its job. The Effect-first rules that
         // contradict that (native Array, String and Object methods, Node built-ins) are off for these files only;
-        // `no-template-curly-in-string` fires on the `${NODE_AUTH_TOKEN}` text of the workflow fixtures.
+        // shell fixtures contain literal template-like parameter expansions.
         files: ["tools/release/**"],
         rules: {
           "effecttsgo/node-builtin-import": "off",

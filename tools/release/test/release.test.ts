@@ -624,7 +624,6 @@ describe("licence hygiene: what ships is flow's own MIT code and its attribution
       "tools/release/test/releaseWorkflow.test.ts",
       "tools/release/test/scriptHarness.ts",
       ".github/workflows/release.yml",
-      "secretspec.toml",
     ];
 
     for (const file of [...withHeader, ".changeset/config.json"]) {
