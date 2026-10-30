@@ -20,3 +20,4 @@ Spec 0005's removal checklist is amended: trusted publishing has already succeed
 ## Revisions
 
 - 2026-10-30: plan written; retained token-free check mode under the operator's revised checklist.
+- 2026-10-30, review round 1: check mode also retains the npm-release approval deliberately; the dry run and registry reads run only after the same environment gate. Reject all stored secret references except GitHub’s built-in token, and npm auth/password configuration, including renamed tokens.

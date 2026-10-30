@@ -98,7 +98,8 @@ const mentions =
 const readRepositoryFile = (name: string): string =>
   readFileSync(path.join(repoRoot, name), "utf-8");
 
-const tokenAuth = /NPM_TOKEN|NODE_AUTH_TOKEN|_authToken|npm_config_.*token/iu;
+const tokenAuth =
+  /NPM_TOKEN|NODE_AUTH_TOKEN|_auth|_password|npm_config_.*token|secrets.(?!GITHUB_TOKEN)[A-Za-z_][A-Za-z0-9_]*/iu;
 
 describe("token-free publishing", () => {
   test("catches credential references and npm auth configuration", () => {
@@ -107,11 +108,20 @@ describe("token-free publishing", () => {
       "NODE_AUTH_TOKEN",
       "_authToken",
       "npm_config_token",
+      "NPM_CONFIG__AUTH: ${{ secrets.NPMJS_KEY }}",
+      "_password",
+      "secrets.OTHER",
+      "secrets.GITHUB_TOKEN_EXTRA",
     ]) {
       expect(tokenAuth.test(text)).toBe(true);
     }
 
     expect(tokenAuth.test("id-token: write")).toBe(false);
+    expect(tokenAuth.test("secrets.GITHUB_TOKEN")).toBe(false);
+    const actual = readRepositoryFile(".github/workflows/release.yml");
+    expect(
+      tokenAuth.test(`${actual}\nNPM_CONFIG__AUTH: \${{ secrets.NPMJS_KEY }}`)
+    ).toBe(true);
   });
 });
 
