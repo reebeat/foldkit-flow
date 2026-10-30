@@ -1,5 +1,5 @@
+import * as Flow from "@tsukuri/flow";
 import { Array, Option } from "effect";
-import * as Flow from "foldkit-flow";
 import { Command, given, message, model, story } from "foldkit/story";
 import { describe, expect, test } from "vite-plus/test";
 

@@ -1,7 +1,7 @@
 import { assert, it } from "@effect/vitest";
+import { eventually } from "@tsukuri/flow/testing";
 import { Effect } from "effect";
 import { Runtime } from "foldkit";
-import { eventually } from "foldkit-flow/testing";
 
 import { exampleApplication } from "./application.ts";
 

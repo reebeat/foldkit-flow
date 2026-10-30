@@ -3,9 +3,9 @@ name: review-pr
 description: "The automated pull-request loop for foldkit-flow: independent reviewers judge the plan, the implementation and their agreement, a fixer addresses findings, each round is recorded on the PR, and a passing PR is merged. Use when a PR is ready for review, when asked to review or merge a PR, or when a review round finishes."
 ---
 
-<!-- Provenance: copied from reebeat/studio @ b26c1cc (.agents/skills/review-pr/SKILL.md), which copied it from reebeat/reebeat @ f7c348877585f54b6bf00651608726dd7e5044d3 (.agents/skills/review-pr/SKILL.md),
+<!-- Provenance: copied from tsukuri-labs/studio @ b26c1cc (.agents/skills/review-pr/SKILL.md), which copied it from tsukuri-labs/tsukuri @ f7c348877585f54b6bf00651608726dd7e5044d3 (.agents/skills/review-pr/SKILL.md),
      which adapted it from phibkro/vektorprogrammet-reimagined @ 797e9e41d96194b9479ff224ac1c40bbc0545888. Deviation:
-     the description names this repository; nothing else changed (reebeat's deviations from the donor: the donor's
+     the description names this repository; nothing else changed (tsukuri's deviations from the donor: the donor's
      verification skills, formal-verification job and database worktree notes are dropped; the verification reviewer runs
      `bun run ready` on the head; reviewers judge plan, implementation and agreement). See PROVENANCE.md. -->
 

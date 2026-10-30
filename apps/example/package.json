@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@effect/platform-browser": "catalog:",
+    "@tsukuri/flow": "workspace:*",
     "effect": "catalog:",
-    "foldkit": "catalog:",
-    "foldkit-flow": "workspace:*"
+    "foldkit": "catalog:"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

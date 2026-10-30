@@ -1,8 +1,8 @@
 # Spec 0000: development lifecycle and scaffold
 
-Status: **spec** (frozen when its PR opens). Date: 2026-10-29. Decided by: the operator's assignment of 2026-10-29 (build `reebeat/foldkit-flow`, its own public repository, MIT licence, a generic library with no reebeat product logic; copy the development lifecycle from reebeat studio; branch protection like reebeat's).
+Status: **spec** (frozen when its PR opens). Date: 2026-10-29. Decided by: the operator's assignment of 2026-10-29 (build `tsukuri-labs/foldkit-flow`, its own public repository, MIT licence, a generic library with no tsukuri product logic; copy the development lifecycle from tsukuri studio; branch protection like tsukuri's).
 Binding for: every later PR in this repository. Implemented by the PR that carries this file.
-Mirrors: [reebeat studio spec 0000](https://github.com/reebeat/studio/blob/main/docs/specs/0000-development-lifecycle.md) at `b26c1cc`, which mirrors [reebeat spec 0000](https://github.com/reebeat/reebeat/blob/main/docs/specs/0000-development-lifecycle.md) at `f7c348877585f54b6bf00651608726dd7e5044d3`. Read them for the reasons; this file records what is the same, what is different and why.
+Mirrors: [tsukuri studio spec 0000](https://github.com/tsukuri-labs/studio/blob/main/docs/specs/0000-development-lifecycle.md) at `b26c1cc`, which mirrors [tsukuri spec 0000](https://github.com/tsukuri-labs/tsukuri/blob/main/docs/specs/0000-development-lifecycle.md) at `f7c348877585f54b6bf00651608726dd7e5044d3`. Read them for the reasons; this file records what is the same, what is different and why.
 
 ## Goal
 
@@ -32,13 +32,13 @@ A reader who clones the repository, runs `devenv shell -- bun install` and then 
 - Reuse, do not hand-roll. Every copied file names its source (repository, commit, deviation) in a header or in `PROVENANCE.md`; scripts are copied byte for byte so `git hash-object` proves it.
 - Default stack as the operator's (TypeScript 7.0.2, Bun, Effect 4.1.0, Oxfmt, Oxlint with the Effect plugin, `@effect/tsgo` 0.63.0, Vite+ 1.2.0, devenv, Foldkit 0.169.0).
 - Public repository, MIT licence (`LICENSE`, `Copyright 2026 Philip Bjørknes Krogh`, the verbatim MIT text). xyflow is credited in `README.md` and `NOTICE`.
-- A generic library: no reebeat product logic. ELK.js (EPL-2.0 OR GPL-3.0) stays out of the library; layout is the application's.
+- A generic library: no tsukuri product logic. ELK.js (EPL-2.0 OR GPL-3.0) stays out of the library; layout is the application's.
 
 ## What is built
 
 | Part | Content | Reused from |
 |---|---|---|
-| Repository | `reebeat/foldkit-flow`, public; first commit `0a7d2c1` (README, `LICENSE`, `.gitignore`) pushed to `main` because the repository had no commit and `main` did not exist; every later change by PR | assignment |
+| Repository | `tsukuri-labs/foldkit-flow`, public; first commit `0a7d2c1` (README, `LICENSE`, `.gitignore`) pushed to `main` because the repository had no commit and `main` did not exist; every later change by PR | assignment |
 | Toolchain | `package.json` (workspaces `apps/*`, `packages/*`, `tools/*`; `catalog` pins), `tsconfig.json`, `devenv.nix` (Bun, Node 24, gitleaks), `devenv.yaml`, `devenv.lock` | studio `b26c1cc`; the toolchain files byte for byte, `package.json` adapted |
 | Lint and format | root `vite.config.ts`: Oxfmt (Ultracite), Oxlint with Ultracite `core`, `@effect/tsgo` presets, the Effect plugin, the anti-slop Effect rules, cognitive complexity at most 15, type-aware, the Foldkit plugin's recommended rules for `apps/example` and `packages/flow` | studio `vite.config.ts`, adapted (groups and overrides) |
 | Hooks | `.vite-hooks/pre-commit`, `commit-msg`, `pre-push`; `commitlint.config.ts` | studio, byte for byte |
@@ -50,10 +50,10 @@ A reader who clones the repository, runs `devenv shell -- bun install` and then 
 | CI | `.github/workflows/checks.yml`: pull requests and push to `main`; pinned devenv; one step per gate; actions pinned by commit | studio, header only |
 | Skills | `.agents/skills/review-pr/` (`SKILL.md`, `record-round.sh`, `merge.sh`), `.agents/skills/pr-create/SKILL.md` | studio; the two scripts byte for byte |
 | Agent docs | `AGENTS.md`, `CLAUDE.md` (`@AGENTS.md` only), `STATE.md`, `PROVENANCE.md`, `NOTICE`, `README.md` | studio's `AGENTS.md`, adapted |
-| Library | `packages/flow` (`foldkit-flow`): `src/attribution.ts` (the `Attribution` tagged union `Visible` or `Hidden`, visible by default, and its view) with Scene tests; peers `effect ~4.1.0` and `foldkit ~0.169.0` | new |
+| Library | `packages/flow` (`@tsukuri/flow`): `src/attribution.ts` (the `Attribution` tagged union `Visible` or `Hidden`, visible by default, and its view) with Scene tests; peers `effect ~4.1.0` and `foldkit ~0.169.0` | new |
 | Example shell | `apps/example`: a Foldkit app whose Model holds the `Attribution`; `main.ts`, `application.ts`, `entry.ts`, `story.test.ts`, `scene.test.ts`, `boot.test.ts`, `FOLDKIT.md` | studio's `apps/editor`, rewritten for the scaffold |
 | One command | `bun run ready` = `check`, `check:exceptions`, `test`, `build`, `knip`, `cpd`, `secrets` | studio |
-| Branch protection | `main`: pull request required (administrators included, no approving reviews), required status check `checks`, no force push, no deletion | `gh api -X PUT repos/reebeat/foldkit-flow/branches/main/protection`, the same body as reebeat's |
+| Branch protection | `main`: pull request required (administrators included, no approving reviews), required status check `checks`, no force push, no deletion | `gh api -X PUT repos/tsukuri-labs/foldkit-flow/branches/main/protection`, the same body as tsukuri's |
 
 ### The published Effect range
 
@@ -101,7 +101,7 @@ Not gated, observed once (recorded in the PR body): the built example, served by
 | Risk | Mitigation |
 |---|---|
 | Foldkit 0.169.0 targets `effect@4.0.0` and this repository runs 4.1.0 | Story and Scene tests, the build, the boot test and a browser smoke on 4.1.0; bun's peer warnings are expected until a Foldkit release lists 4.1.0; the family check keeps `effect` and `@effect/*` at one version |
-| `@foldkit/vite-plugin` is unusable on 4.1.0 (it imports `Crypto` from the `effect` root) | Not installed; the app builds with Vite+ and Tailwind; its dev tools and hot model preservation are off (reebeat studio issue #4; agent FoldkitUpstream has an upstream fix in flight) |
+| `@foldkit/vite-plugin` is unusable on 4.1.0 (it imports `Crypto` from the `effect` root) | Not installed; the app builds with Vite+ and Tailwind; its dev tools and hot model preservation are off (tsukuri studio issue #4; agent FoldkitUpstream has an upstream fix in flight) |
 | devenv in CI is slow (Nix install, cache misses) | Reuse studio's pinned devenv and the `devenv` Cachix cache |
 | The exception registry becomes a rubber stamp | Each entry needs a retirement trigger and the conformance reviewer checks new entries |
 | Branch protection with administrators included blocks the operator in an emergency | The command that removes it is in `AGENTS.md` |
@@ -110,7 +110,7 @@ Not gated, observed once (recorded in the PR body): the built example, served by
 
 1. Offer the library to Foldkit as `@foldkit/flow` (recorded as a later option in `STATE.md`): when, and under which package name and licence header?
 2. Vendor the Foldkit repository as a subtree (`repos/foldkit`, as `FOLDKIT.md` offers)? Not done; the installed package's JSDoc was enough.
-3. A required human approval, signed commits, Renovate: deferred, as in reebeat and studio.
+3. A required human approval, signed commits, Renovate: deferred, as in tsukuri and studio.
 
 ## Revisions
 
