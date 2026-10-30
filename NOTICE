@@ -1,20 +1,33 @@
-foldkit-flow
+foldkit-flow, published as @tsukuri/flow
 Copyright 2026 Philip Bjørknes Krogh. MIT licence (see LICENSE).
 
-foldkit-flow depends on, and takes its design from, xyflow:
+What the npm package contains: the library's own source, built (index.mjs and testing.mjs
+with their declarations, and flow.css), this NOTICE, LICENSE, README.md and package.json.
+All of it is original code under the MIT licence. The package bundles no third-party code;
+it installs these third-party packages as dependencies, each under its own licence:
 
   @xyflow/system, https://github.com/xyflow/xyflow/tree/main/packages/system
   Copyright (c) 2019-2025 webkid GmbH. MIT licence.
 
-@xyflow/system uses d3-zoom, d3-drag, d3-selection and d3-interpolate, and foldkit-flow
-uses d3-selection directly (ISC licence, Copyright Mike Bostock, https://d3js.org).
+  d3-selection, https://github.com/d3/d3-selection (a dependency of foldkit-flow, and of
+  @xyflow/system with d3-zoom, d3-drag and d3-interpolate)
+  Copyright Mike Bostock. ISC licence. https://d3js.org
 
-React Flow and Svelte Flow are bindings over @xyflow/system. foldkit-flow is a third
-binding: it drives the framework-free controllers of that package (pan and zoom, drag,
-handles, minimap, resizer) from Foldkit Mounts and uses its edge-path and graph
-utilities. xyflow asks its users to keep the attribution link or to support the project;
-foldkit-flow therefore shows a link to https://xyflow.com in the corner of the canvas
-by default, and an application can turn it off (see README.md, "Credit").
+foldkit-flow takes its design from xyflow. React Flow and Svelte Flow are bindings over
+@xyflow/system. foldkit-flow is a third binding: it drives the framework-free controllers
+of that package (pan and zoom, drag, handles, minimap, resizer) from Foldkit Mounts and
+uses its edge-path and graph utilities. xyflow asks its users to keep the attribution link
+or to support the project; foldkit-flow therefore shows a link to https://xyflow.com in the
+corner of the canvas by default, and an application can turn it off (see README.md, "Credit").
 
-Other third-party code in this repository keeps its own licence next to it; see
-PROVENANCE.md.
+The repository, not the package, also holds files copied from other repositories. Those
+copied from Apache-2.0 repositories (tsukuri-labs/tsukuri, tsukuri-labs/studio,
+phibkro/vektorprogrammet-reimagined, phibkro/pg-txmode) keep the Apache-2.0 licence and the
+headers that name their source; the licence text is LICENSES/Apache-2.0.txt, and
+PROVENANCE.md lists every copied file with its source and licence. The MIT licence of this
+project does not relicense them. None of them is in the npm package.
+
+Two files of the example app come from the Foldkit template (create-foldkit-app, MIT,
+Copyright (c) 2025 Devin Jameson): apps/example/FOLDKIT.md and the two-line vitest setup
+(apps/example/src/vitestSetup.ts and packages/flow/src/vitestSetup.ts). Neither is in the
+npm package.

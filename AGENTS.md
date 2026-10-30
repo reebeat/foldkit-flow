@@ -25,6 +25,7 @@ apps/example      the Foldkit app that exercises the library; depends on package
 packages/flow     @tsukuri/flow: Submodels, views, Mounts; peers: effect, foldkit; depends on @xyflow/system
 tools/quality     repository checks (exception registry, Effect family, published Effect range, Foldkit lint adapter)
 tools/journey     the browser gate: drives the built example in headless Chromium (puppeteer-core), measures the budget
+tools/release     the release path: stage what is published, the release workflow and token rules (plain TypeScript, copied from phibkro/pg-txmode)
 tools/oxlint      vendored Oxlint rules
 ```
 
@@ -45,10 +46,15 @@ Every gate is a root script in `package.json`; `bun run ready` runs them in this
 | Effect family | `bun run test` (`tools/quality/test/effectFamily.test.ts`) | `ready`, CI | `effect` locked at two versions, or an `@effect/*` package at another version than `effect` in `bun.lock`; `@effect/tsgo` locked at two versions | change one `@effect/*` entry of `bun.lock` |
 | Published Effect range | `bun run test` (`tools/quality/test/publishedEffectRange.test.ts`) | `ready`, CI | a package under `packages/` whose Effect range starts below 4.1.0, or that uses an unstable or experimental Effect API (found by `effect-tsgo diagnostics` over its `src`) and accepts the next minor | change a peer range of `packages/flow` to `^4.1.0` and use `FileSystem` from `effect` in its source |
 | Build | `bun run build` (`vp build` in `apps/example`) | `ready`, CI | the example no longer bundles | import a module that does not exist |
+| Release package | `bun run release:stage` (`tools/release/stagePackages.ts`) | `ready`, CI | a package that would ship a file that is not built output, an import that does not resolve for a consumer (the staged package type-checked without `skipLibCheck`), or a manifest that is incomplete; the token, mode, hold and tarball rules run in `bun run test` (`tools/release/test`) | remove `foldkit` from the `peerDependencies` of `packages/flow` (`docs/specs/0005-evidence/control-missing-peer.log`) |
 | Browser journey | `bun run build && bun run journey` (`tools/journey`) | locally, **not** in `ready` or CI (CI has no browser). Exit codes: 0 held, 1 a check failed, **75 inconclusive**: nothing failed but the J9 timing check was not judged, because the host was busy or unreadable (load average above half the cores, memory, memory pressure or swap-in over the operator's limits, read before and after; `tools/journey/host.ts`). 75 means **not run**: it is never a pass (and a head's J9 timing is judged by the median of its first 3 admitted runs, all logged: spec 0002, Revisions of round 2), and a caller that runs the journey (as `ready` would) must treat it as not run; the J9 memoisation check (DOM mutations, no timing) runs and counts on every host | the felt journey and the performance budget in headless Chromium: pan and zoom touch no node, drag, connect, refuse an invalid connection, reconnect, box select, keyboard only, controls, minimap, and the 500-node, 700-edge drag (spec 0001, J1 to J6, J9, J10); evidence in `~/.local/state/foldkit-flow-verify/journey/` | pass `view.ts` a viewport-dependent node argument, or remove `tabindex` from a node; run it while the host's load average is above 16 (exit 75) |
 | Dead code | `bun run knip` | `ready`, CI | unused files, exports and dependencies | export a symbol nothing imports |
 | Duplication | `bun run cpd` | `ready`, CI | copy-paste (threshold 0) | paste a 40-token block twice |
 | Secrets, history | `bun run secrets` | `ready`, CI | a secret anywhere in the git history | commit a fake key on a scratch branch |
+
+## Release
+
+`@tsukuri/flow` is published from `packages/flow/dist`, built by `bun run release:stage`; the source manifest keeps `exports` at `src/*.ts` for the workspace (spec 0005). **An agent never publishes, never dispatches `.github/workflows/release.yml`, and never reads or sets `NPM_TOKEN`**: those are operator actions. Changesets only versions (`bun run release:version`); the `Publish` step of the workflow passes `--tag` itself (the Tag lesson, spec 0005) and publishes only when `npm view` says E404. The workflow runs only on `main`, in the environment `npm-release`; `.github/release-hold`, when it exists, stops it. A change to a published package that users should see adds a changeset (`bun run changeset`). Everything copied from an Apache-2.0 repository keeps its header and stays out of the tarball (`PROVENANCE.md`, "Licence of every file").
 
 ## Exceptions
 

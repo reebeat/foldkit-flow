@@ -120,13 +120,12 @@ describe("which packages are published", () => {
     ]);
   });
 
-  test("the pre mode is alpha while the package has not reached 1.0.0", () => {
-    // `.changeset/pre.json` arrives with the version commit (the next PR); until then the file may be absent.
-    const files = globSync(".changeset/pre.json", { cwd: repoRoot });
-
-    for (const file of files) {
-      expect(readJson(file, Pre)).toStrictEqual({ mode: "pre", tag: "alpha" });
-    }
+  test("the pre mode is alpha: the file is committed, so a dispatch before the version commit still tags alpha", () => {
+    // Extra keys that `changeset version` adds (the consumed changesets) are not part of the rule: the schema drops them.
+    expect(readJson(".changeset/pre.json", Pre)).toStrictEqual({
+      mode: "pre",
+      tag: "alpha",
+    });
   });
 
   test("no published package depends on one that is not published (control)", () => {
